@@ -8,23 +8,27 @@ ms_log(void* context, mavlink_message_t* msg)
     INFO("[%lu] Rx: msg id = %d len = %d seq = %d payload = ", time_us(),
         msg->msgid, msg->len, msg->seq);
     lwm_puthex(msg->payload64, msg->len);
+    printf("\n");
 
     switch (msg->msgid)
     {
     case MAVLINK_MSG_ID_BATTERY_STATUS:
-    {
         mavlink_battery_status_t battery_status;
         mavlink_msg_battery_status_decode(msg, &battery_status);
         INFO("Battery status: {current consumed %d mAh, remaining %d %%, energy consumed %d hJ}\n",
             battery_status.current_consumed, battery_status.battery_remaining,
             battery_status.energy_consumed);
-    }
-    break;
+        break;
     default:
+    case MAVLINK_MSG_ID_HEARTBEAT:
+        mavlink_heartbeat_t heartbeat;
+        mavlink_msg_heartbeat_decode(msg, &heartbeat);
+        INFO("Heartbeat: {type %d, autopilot %d, base_mode %d, custom_mode %d, system_status %d, mavlink_version %d}\n",
+            heartbeat.type, heartbeat.autopilot, heartbeat.base_mode,
+            heartbeat.custom_mode, heartbeat.system_status,
+            heartbeat.mavlink_version);
         break;
     }
-
-    printf("\n");
 }
 
 int
