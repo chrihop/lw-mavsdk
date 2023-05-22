@@ -24,7 +24,7 @@ cmake ..
 Build the library:
 
 ```sh
-make lw-mavsdk
+make lwmavsdk
 ```
 
 Build the test suite and examples:

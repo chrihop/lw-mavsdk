@@ -2,21 +2,39 @@
 
 struct lwm_vehicle_t vehicle;
 
-static void ms_log(void * context, mavlink_message_t * msg)
+static void
+ms_log(void* context, mavlink_message_t* msg)
 {
-    INFO("[%lu] Rx: msg id = %d len = %d seq = %d payload = ",
-        time_us(), msg->msgid, msg->len, msg->seq);
+    INFO("[%lu] Rx: msg id = %d len = %d seq = %d payload = ", time_us(),
+        msg->msgid, msg->len, msg->seq);
     lwm_puthex(msg->payload64, msg->len);
+
+    switch (msg->msgid)
+    {
+    case MAVLINK_MSG_ID_BATTERY_STATUS:
+    {
+        mavlink_battery_status_t battery_status;
+        mavlink_msg_battery_status_decode(msg, &battery_status);
+        INFO("Battery status: {current consumed %d mAh, remaining %d %%, energy consumed %d hJ}\n",
+            battery_status.current_consumed, battery_status.battery_remaining,
+            battery_status.energy_consumed);
+    }
+    break;
+    default:
+        break;
+    }
+
     printf("\n");
 }
 
-int main(int argc, char ** argv)
+int
+main(int argc, char** argv)
 {
     lwm_vehicle_init(&vehicle);
     lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_UDP, "127.0.0.1", 14550);
 
-    lwm_microservice_t * log = lwm_microservice_create(&vehicle);
-    log->handler = ms_log;
+    lwm_microservice_t* log = lwm_microservice_create(&vehicle);
+    log->handler            = ms_log;
     lwm_microservice_add_to(&vehicle, MAVLINK_MSG_ID_HEARTBEAT, log);
     lwm_microservice_add_to(&vehicle, MAVLINK_MSG_ID_BATTERY_STATUS, log);
     lwm_vehicle_spin(&vehicle);
