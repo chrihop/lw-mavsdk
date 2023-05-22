@@ -20,8 +20,7 @@ struct lwm_action_param_t
 
 
 typedef enum lwm_error_t (*lwm_run_t)(struct lwm_action_t* action, void* data);
-typedef void (*lwm_except_t)(
-    struct lwm_action_t* action, enum lwm_event_t event, struct lwm_action_param_t* param);
+typedef void (*lwm_except_t)(struct lwm_action_t* action, struct lwm_action_param_t* param);
 typedef void (*lwm_then_t)(struct lwm_action_t* action, struct lwm_action_param_t* param);
 typedef void (*lwm_timeout_t)(struct lwm_action_t* action, struct lwm_action_param_t* param);
 
