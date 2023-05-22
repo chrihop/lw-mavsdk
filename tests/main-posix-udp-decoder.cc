@@ -5,10 +5,8 @@ struct lwm_vehicle_t vehicle;
 static void
 ms_log(void* context, mavlink_message_t* msg)
 {
-    INFO("[%lu] Rx: msg id = %d len = %d seq = %d payload = ", time_us(),
+    INFO("[%lu] Rx: msg id = %d len = %d seq = %d ", time_us(),
         msg->msgid, msg->len, msg->seq);
-    lwm_puthex(msg->payload64, msg->len);
-    printf("\n");
 
     switch (msg->msgid)
     {
@@ -19,7 +17,6 @@ ms_log(void* context, mavlink_message_t* msg)
             battery_status.current_consumed, battery_status.battery_remaining,
             battery_status.energy_consumed);
         break;
-    default:
     case MAVLINK_MSG_ID_HEARTBEAT:
         mavlink_heartbeat_t heartbeat;
         mavlink_msg_heartbeat_decode(msg, &heartbeat);
@@ -28,6 +25,10 @@ ms_log(void* context, mavlink_message_t* msg)
             heartbeat.custom_mode, heartbeat.system_status,
             heartbeat.mavlink_version);
         break;
+    default:
+        printf("payload = ");
+        lwm_puthex(msg->payload64, msg->len);
+        printf("\n");
     }
 }
 
