@@ -94,6 +94,12 @@ ms_mav_cmd_home_position(void* context, mavlink_message_t* msg)
         mavlink_message_t msg;
         mavlink_msg_command_long_encode(
             255, 1, &msg, &home_pos_cmd);
+        err = lwm_conn_send(&vehicle.conn, &msg);
+        if (err != LWM_OK)
+        {
+            WARN ("Failed to send MAV_CMD_REQUEST_MESSAGE\n");
+            return 0;
+        }
 
         err = LWM_OK;
         while (err == LWM_OK && !home_pos_received)
@@ -101,7 +107,12 @@ ms_mav_cmd_home_position(void* context, mavlink_message_t* msg)
             err = lwm_vehicle_spin_once(&vehicle);
         }
 
-        printf("Home position: %d %d %d\n", home_pos.lat, home_pos.lon, home_pos.alt);
+        printf("Home position: (%d.%07d, %d.%07d) at %d.%03d m\n",
+            home_pos.lat / (int) 10e7, abs(home_pos.lat) % (int) 10e7,
+            home_pos.lon / (int) 10e7, abs(home_pos.lon) % (int) 10e7,
+            home_pos.alt / 1000, home_pos.alt % 1000);
+
+
         lwm_conn_close(&vehicle.conn);
 
         return 0;
