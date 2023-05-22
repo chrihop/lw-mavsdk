@@ -39,6 +39,11 @@ add_executable(
     main-posix-udp-decoder.cc
 )
 
+add_executable(
+    main-get-home-position
+    main-get-home-position.c
+)
+
 #
 # - GTests
 #

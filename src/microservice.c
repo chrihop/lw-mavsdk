@@ -188,7 +188,7 @@ static void lwm_microservice_registry_remove(struct lwm_microservice_registry_t 
     }
 }
 
-static void lwm_microservice_registry_remova_all(struct lwm_microservice_registry_t * registry, struct lwm_microservice_t * service)
+static void lwm_microservice_registry_remove_all(struct lwm_microservice_registry_t * registry, struct lwm_microservice_t * service)
 {
     for (uint32_t i = 0; i < MAX_LWM_SERVICE_REGISTRY; i++)
     {
@@ -234,4 +234,10 @@ enum lwm_error_t lwm_microservice_remove_from(struct lwm_vehicle_t * vehicle, ui
 struct lwm_microservice_t * lwm_microservice_create(struct lwm_vehicle_t * vehicle)
 {
     return lwm_service_pool_alloc(&vehicle->service_pool);
+}
+
+void lwm_microservice_destroy(struct lwm_vehicle_t * vehicle, struct lwm_microservice_t * service)
+{
+    lwm_microservice_registry_remove_all(&vehicle->registry, service);
+    lwm_service_pool_free(&vehicle->service_pool, service);
 }
