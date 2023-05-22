@@ -52,9 +52,9 @@ ms_mav_cmd_home_position(void* context, mavlink_message_t* msg)
         {
             INFO("Home position received\n");
             home_pos_received = true;
-            global_pos.alt = home_pos.alt;
-            global_pos.lat = home_pos.lat;
-            global_pos.lon = home_pos.lon;
+            home_pos.alt = global_pos.alt;
+            home_pos.lat = global_pos.lat;
+            home_pos.lon = global_pos.lon;
             ms_mav_cleanup_home_position(ms);
         }
     }
@@ -93,7 +93,7 @@ ms_mav_cmd_home_position(void* context, mavlink_message_t* msg)
 
         mavlink_message_t msg;
         mavlink_msg_command_long_encode(
-            1, 1, &msg, &home_pos_cmd);
+            255, 1, &msg, &home_pos_cmd);
 
         err = LWM_OK;
         while (err == LWM_OK && !home_pos_received)
