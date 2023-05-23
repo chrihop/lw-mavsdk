@@ -54,6 +54,10 @@ add_executable(
     main-get-home-position-command.c
 )
 
+add_executable(
+    main-battery-fence
+    main-battery-fence.c
+)
 
 #
 # - GTests
