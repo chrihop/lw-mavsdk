@@ -67,7 +67,11 @@ main(int argc, char** argv)
     battery->context = NULL;
     lwm_microservice_add_to(&vehicle, MAVLINK_MSG_ID_BATTERY_STATUS, battery);
 
-    lwm_vehicle_spin(&vehicle);
+    enum lwm_error_t err;
+    while (err == LWM_OK)
+    {
+        err = lwm_vehicle_spin_once(&vehicle);
+    }
 
     return 0;
 }
