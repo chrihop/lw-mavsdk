@@ -1,6 +1,16 @@
 #include "lwmavsdk.h"
+#include <math.h>
 
 static struct lwm_vehicle_t vehicle;
+
+double get_distance_meters(mavlink_global_position_int_t* pos1, mavlink_global_position_int_t* pos2) {
+
+    double dlat = pos1->lat - pos2->lat;
+    double dlong = pos1->lon - pos2->lon;
+    
+    double dist = sqrt((dlat*dlat) + (dlong*dlong)) * 1.113195e5;
+    return dist;
+}
 
 static void
 callback_on_current_position(void * context, mavlink_message_t * msg)
