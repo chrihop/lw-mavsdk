@@ -40,3 +40,33 @@ lwm_command_request_message_periodic(struct lwm_vehicle_t* vehicle,
     lwm_action_upon_msgid(&cmd->action.then_msgid_list, 1, msgid);
     lwm_command_execute_async(cmd);
 }
+
+static enum lwm_action_continuation_t
+lwm_command_get_home_position_then(
+    struct lwm_action_t* action, struct lwm_action_param_t* param)
+{
+    ASSERT(action != NULL);
+    ASSERT(action->data != NULL);
+    ASSERT(action->vehicle != NULL);
+    ASSERT(param != NULL);
+
+    mavlink_message_t* msg = param->detail.msg.msg;
+    if (msg->msgid == action->then_msgid_list.msgid[0])
+    {
+        action->result = msg;
+        return LWM_ACTION_STOP;
+    }
+    return LWM_ACTION_CONTINUE;
+}
+
+mavlink_message_t*
+lwm_command_get_home_position(struct lwm_vehicle_t* vehicle)
+{
+    struct lwm_command_t cmd;
+    lwm_command_long(vehicle, &cmd, lwm_command_get_home_position_then,
+        MAV_CMD_GET_HOME_POSITION, 0);
+    lwm_action_upon_msgid(&cmd.action.then_msgid_list, 1, MAVLINK_MSG_ID_HOME_POSITION);
+    lwm_command_execute(&cmd);
+    return cmd.action.result;
+}
+

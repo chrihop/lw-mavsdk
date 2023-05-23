@@ -74,12 +74,14 @@ main(int argc, char** argv)
     lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_UDP, "127.0.0.1", 14550);
 
     mavlink_message_t* msg;
-    msg = lwm_command_request_message(
-        &vehicle, MAVLINK_MSG_ID_GLOBAL_POSITION_INT);
-    mavlink_global_position_int_t home_position;
-    mavlink_msg_global_position_int_decode(msg, &home_position);
-    INFO("Home Position: (%f, %f) at %f m\n", home_position.lat / 10000000.0,
-        home_position.lon / 10000000.0, home_position.alt / 1000.0);
+
+    msg = lwm_command_get_home_position(&vehicle);
+    mavlink_home_position_t home_position;
+    mavlink_msg_home_position_decode(msg, &home_position);
+    INFO("Home Position: (%f, %f) at %f m\n",
+        home_position.latitude / 10000000.0,
+        home_position.longitude / 10000000.0,
+        home_position.altitude / 1000.0);
 
     struct lwm_microservice_t* curr_pos = lwm_microservice_create(&vehicle);
     curr_pos->handler                   = callback_on_current_position;

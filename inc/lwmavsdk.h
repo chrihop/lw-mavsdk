@@ -316,11 +316,17 @@ void lwm_command_execute_timeout(
     struct lwm_command_t* x, uint64_t timeout_us);
 void               lwm_command_execute_async(struct lwm_command_t* x);
 
+
 mavlink_message_t* lwm_command_request_message(
     struct lwm_vehicle_t* vehicle, uint32_t msgid);
+/**
+ * @warning calling this function may lead Ardupilot to crash
+ */
 void lwm_command_request_message_periodic(struct lwm_vehicle_t* vehicle,
     struct lwm_command_t* cmd, uint32_t msgid, uint32_t period_us,
     lwm_then_t callback);
+mavlink_message_t* lwm_command_get_home_position(struct lwm_vehicle_t* vehicle);
+
 
 #if __cplusplus
 };
