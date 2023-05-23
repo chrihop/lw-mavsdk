@@ -5,7 +5,9 @@ set (LWMAVSDK_SRC
     connection_factory.c
     vehicle.c
     microservice.c
-#    protocol.c
+    protocol.c
+    command.c
+    command_factory.c
     )
 
 

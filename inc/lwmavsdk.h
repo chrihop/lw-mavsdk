@@ -15,6 +15,8 @@ enum lwm_error_t
     LWM_ERR_NO_DATA,
     LWM_ERR_NO_MEM,
     LWM_ERR_NOT_SUPPORTED,
+    LWM_ERR_TIMEOUT,
+    LWM_ERR_STOPPED,
 
     MAX_LWM_ERROR
 };
@@ -151,9 +153,119 @@ struct lwm_microservice_registry_t
  ***/
 struct lwm_vehicle_t
 {
-    struct lwm_conn_context_t conn;
+    struct lwm_conn_context_t          conn;
     struct lwm_microservice_registry_t registry;
     struct lwm_service_pool_t          service_pool;
+    uint32_t                           sysid;
+    uint32_t                           compid;
+};
+
+/***
+ * Protocol
+ ***/
+
+enum lwm_event_t
+{
+    LWM_EVENT_MSG,
+    LWM_EVENT_IO,
+    LWM_EVENT_FAIL,
+    LWM_EVENT_TIMEOUT,
+
+    MAX_LWM_EVENT
+};
+
+struct lwm_action_t;
+
+struct lwm_action_param_t
+{
+    struct lwm_action_t* action;
+    enum lwm_event_t     event;
+    union
+    {
+        struct
+        {
+            mavlink_message_t* msg;
+        } msg;
+        struct
+        {
+            enum lwm_error_t err;
+        } fail;
+        struct
+        {
+            uint64_t time;
+        } timeout;
+    } detail;
+};
+
+enum lwm_action_continuation_t
+{
+    LWM_ACTION_CONTINUE,
+    LWM_ACTION_STOP,
+    LWM_ACTION_RESTART
+};
+
+typedef enum lwm_error_t (*lwm_run_t)(struct lwm_action_t* action, void* data);
+typedef void (*lwm_except_t)(
+    struct lwm_action_t* action, struct lwm_action_param_t* param);
+typedef enum lwm_action_continuation_t (*lwm_then_t)(
+    struct lwm_action_t* action, struct lwm_action_param_t* param);
+typedef void (*lwm_timeout_t)(
+    struct lwm_action_t* action, struct lwm_action_param_t* param);
+
+#define LWM_MSGID_LIST_SIZE 16
+
+struct lwm_msgid_list_t
+{
+    uint32_t n;
+    uint32_t msgid[LWM_MSGID_LIST_SIZE];
+};
+
+enum lwm_action_status_t
+{
+    LWM_ACTION_INIT,
+    LWM_ACTION_EXECUTING,
+    LWM_ACTION_FINISHED,
+    LWM_ACTION_FAILED,
+
+    MAX_LWM_ACTION_STATUS
+};
+
+struct lwm_action_t
+{
+    enum lwm_action_status_t   status;
+    void*                      data;
+    void*                      result;
+    struct lwm_vehicle_t*      vehicle;
+    struct lwm_microservice_t* microservice;
+    lwm_run_t                  run;
+    struct lwm_msgid_list_t    except_msgid_list;
+    lwm_except_t               except;
+    struct lwm_msgid_list_t    then_msgid_list;
+    lwm_then_t                 then;
+    uint64_t                   timeout_time;
+    lwm_timeout_t              timeout;
+};
+
+/***
+ * Command
+ ***/
+enum lwm_command_type_t
+{
+    LWM_COMMAND_TYPE_INT,
+    LWM_COMMAND_TYPE_LONG,
+};
+
+struct lwm_command_t
+{
+    struct lwm_action_t     action;
+    enum lwm_command_type_t type;
+    union
+    {
+        mavlink_command_int_t  _int;
+        mavlink_command_long_t _long;
+    } cmd;
+    mavlink_message_t out_msg;
+    lwm_then_t        do_then;
 };
 
 #if __cplusplus
@@ -161,22 +273,54 @@ extern "C"
 {
 #endif
 
-enum lwm_error_t lwm_conn_open(struct lwm_conn_context_t* ctx, enum lwm_conn_type_t type, ...);
-enum lwm_error_t lwm_conn_send(struct lwm_conn_context_t* ctx, mavlink_message_t* msg);
-enum lwm_error_t lwm_conn_recv(struct lwm_conn_context_t* ctx, mavlink_message_t* msg);
+enum lwm_error_t lwm_conn_open(
+    struct lwm_conn_context_t* ctx, enum lwm_conn_type_t type, ...);
+enum lwm_error_t lwm_conn_send(
+    struct lwm_conn_context_t* ctx, mavlink_message_t* msg);
+enum lwm_error_t lwm_conn_recv(
+    struct lwm_conn_context_t* ctx, mavlink_message_t* msg);
 void             lwm_conn_close(struct lwm_conn_context_t* ctx);
-enum lwm_error_t lwm_conn_register(struct lwm_conn_context_t * ctx, enum lwm_conn_type_t type);
+enum lwm_error_t lwm_conn_register(
+    struct lwm_conn_context_t* ctx, enum lwm_conn_type_t type);
 
-void lwm_microservice_init(struct lwm_vehicle_t * vehicle);
-void lwm_microservice_process(struct lwm_vehicle_t * vehicle, mavlink_message_t * msg);
-enum lwm_error_t lwm_microservice_add_to(struct lwm_vehicle_t * vehicle, uint32_t msgid, struct lwm_microservice_t * service);
-enum lwm_error_t lwm_microservice_remove_from(struct lwm_vehicle_t * vehicle, uint32_t msgid, struct lwm_microservice_t * service);
-struct lwm_microservice_t * lwm_microservice_create(struct lwm_vehicle_t * vehicle);
-void lwm_microservice_destroy(struct lwm_vehicle_t * vehicle, struct lwm_microservice_t * service);
+void lwm_microservice_init(struct lwm_vehicle_t* vehicle);
+void lwm_microservice_process(
+    struct lwm_vehicle_t* vehicle, mavlink_message_t* msg);
+enum lwm_error_t lwm_microservice_add_to(struct lwm_vehicle_t* vehicle,
+    uint32_t msgid, struct lwm_microservice_t* service);
+enum lwm_error_t lwm_microservice_remove_from(struct lwm_vehicle_t* vehicle,
+    uint32_t msgid, struct lwm_microservice_t* service);
+struct lwm_microservice_t* lwm_microservice_create(
+    struct lwm_vehicle_t* vehicle);
+void lwm_microservice_destroy(
+    struct lwm_vehicle_t* vehicle, struct lwm_microservice_t* service);
 
-void lwm_vehicle_init(struct lwm_vehicle_t* vehicle);
+void             lwm_vehicle_init(struct lwm_vehicle_t* vehicle);
 enum lwm_error_t lwm_vehicle_spin_once(struct lwm_vehicle_t* vehicle);
-void lwm_vehicle_spin(struct lwm_vehicle_t* vehicle);
+void             lwm_vehicle_spin(struct lwm_vehicle_t* vehicle);
+
+void             lwm_action_init(struct lwm_action_t* action,
+                struct lwm_vehicle_t* vehicle, lwm_run_t run);
+enum lwm_error_t lwm_action_poll_once(struct lwm_action_t* action);
+void lwm_action_submit(struct lwm_action_t* action, uint64_t timeout_us);
+void lwm_action_upon_msgid(struct lwm_msgid_list_t* list, size_t n, ...);
+enum lwm_error_t lwm_action_poll(struct lwm_action_t* action);
+
+void             lwm_command_long(struct lwm_vehicle_t* vehicle,
+                struct lwm_command_t* x, lwm_then_t then, uint16_t command, size_t argc,
+                ...);
+void lwm_command_int(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
+    lwm_then_t then, uint16_t command, size_t argc, ...);
+void lwm_command_execute(struct lwm_command_t* x);
+void lwm_command_execute_timeout(
+    struct lwm_command_t* x, uint64_t timeout_us);
+void               lwm_command_execute_async(struct lwm_command_t* x);
+
+mavlink_message_t* lwm_command_request_message(
+    struct lwm_vehicle_t* vehicle, uint32_t msgid);
+void lwm_command_request_message_periodic(struct lwm_vehicle_t* vehicle,
+    struct lwm_command_t* cmd, uint32_t msgid, uint32_t period_us,
+    lwm_then_t callback);
 
 #if __cplusplus
 };

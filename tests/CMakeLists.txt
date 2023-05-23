@@ -44,6 +44,17 @@ add_executable(
     main-get-home-position.c
 )
 
+add_executable(
+    main-get-home-position-protocol
+    main-get-home-position-protocol.c
+)
+
+add_executable(
+    main-get-home-position-command
+    main-get-home-position-command.c
+)
+
+
 #
 # - GTests
 #
