@@ -1,7 +1,12 @@
 #include "lwmavsdk.h"
 #include <math.h>
+#include <string.h>
 
 static struct lwm_vehicle_t vehicle;
+
+static mavlink_global_position_int_t current_position;
+static mavlink_battery_status_t current_battery_status;
+static int started = 0;
 
 double get_distance_meters(mavlink_global_position_int_t* pos1, mavlink_global_position_int_t* pos2) {
 
@@ -22,10 +27,14 @@ callback_on_current_position(void * context, mavlink_message_t * msg)
 
     mavlink_global_position_int_t global_pos;
     mavlink_msg_global_position_int_decode(msg, &global_pos);
-    INFO("Current Position: (%f, %f) at %f m\n",
-        global_pos.lat / 10000000.0,
-        global_pos.lon / 10000000.0,
-        global_pos.alt / 1000.0);
+
+    memcpy(&current_position, &global_pos, sizeof(mavlink_global_position_int_t));
+    started = started | 1;
+
+    // INFO("Current Position: (%f, %f) at %f m\n",
+    //     global_pos.lat / 10000000.0,
+    //     global_pos.lon / 10000000.0,
+    //     global_pos.alt / 1000.0);
 }
 
 static void
@@ -39,7 +48,12 @@ static void
 
     mavlink_battery_status_t battery_status;
     mavlink_msg_battery_status_decode(msg, &battery_status);
-    INFO("Battery Status: %d%%\n", battery_status.battery_remaining);
+
+    memcpy(&current_battery_status, &battery_status, sizeof(mavlink_battery_status_t));
+
+    started = started | 2;
+
+    // INFO("Battery Status: %d%%\n", battery_status.battery_remaining);
 }
 
 int
@@ -70,6 +84,14 @@ main(int argc, char** argv)
     enum lwm_error_t err;
     while (err == LWM_OK)
     {
+        if (started == 3) {            
+            INFO("Current Position: (%f, %f) at %f m\n",
+                current_position.lat / 10000000.0,
+                current_position.lon / 10000000.0,
+                current_position.alt / 1000.0);
+
+            INFO("Battery Status: %d%%\n", current_battery_status.battery_remaining);
+        }
         err = lwm_vehicle_spin_once(&vehicle);
     }
 
