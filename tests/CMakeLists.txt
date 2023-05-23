@@ -59,6 +59,12 @@ add_executable(
     main-battery-fence.c
 )
 
+target_link_libraries(
+    main-battery-fence
+    PRIVATE
+    m
+)
+
 #
 # - GTests
 #
