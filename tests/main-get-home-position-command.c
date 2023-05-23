@@ -22,7 +22,7 @@ int
 main(int argc, char** argv)
 {
     lwm_vehicle_init(&vehicle);
-    lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_UDP, "127.0.0.1", 14550);
+    lwm_conn_open(&vehicle.conn, 14550);
 
     mavlink_message_t * msg;
     msg = lwm_command_request_message(&vehicle, MAVLINK_MSG_ID_GLOBAL_POSITION_INT);

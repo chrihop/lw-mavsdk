@@ -70,12 +70,21 @@ callback_on_battery_status(void* context, mavlink_message_t* msg)
 int
 main(int argc, char** argv)
 {
+    enum lwm_error_t err;
     lwm_vehicle_init(&vehicle);
-    lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_UDP, "127.0.0.1", 14550);
+    err = lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_UDP, 14550);
+    if (err != LWM_OK)
+    {
+        PANIC("Failed to open connection\n");
+    }
 
     mavlink_message_t* msg;
 
     msg = lwm_command_get_home_position(&vehicle);
+    if (msg == NULL)
+    {
+        PANIC("Failed to get home position\n");
+    }
     mavlink_home_position_t home_position;
     mavlink_msg_home_position_decode(msg, &home_position);
     INFO("Home Position: (%f, %f) at %f m\n",
@@ -94,7 +103,6 @@ main(int argc, char** argv)
     battery->context                   = NULL;
     lwm_microservice_add_to(&vehicle, MAVLINK_MSG_ID_BATTERY_STATUS, battery);
 
-    enum lwm_error_t err = LWM_OK;    
     while (err == LWM_OK && started != 3)
         err = lwm_vehicle_spin_once(&vehicle);
 

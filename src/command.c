@@ -13,10 +13,12 @@ lwm_command_exec(struct lwm_action_t* action, void* data)
     switch (x->type)
     {
     case LWM_COMMAND_TYPE_INT:
-        mavlink_msg_command_int_encode(255, 1, &x->out_msg, &x->cmd._int);
+        mavlink_msg_command_int_encode(
+            SYSTEM_ID, COMPONENT_ID, &x->out_msg, &x->cmd._int);
         break;
     case LWM_COMMAND_TYPE_LONG:
-        mavlink_msg_command_long_encode(255, 1, &x->out_msg, &x->cmd._long);
+        mavlink_msg_command_long_encode(
+            SYSTEM_ID, COMPONENT_ID, &x->out_msg, &x->cmd._long);
         break;
     default:
         WARN("Unknown command type: %d\n", x->type);
@@ -24,7 +26,12 @@ lwm_command_exec(struct lwm_action_t* action, void* data)
     }
 
     struct lwm_vehicle_t* vehicle = x->action.vehicle;
-    return lwm_conn_send(&vehicle->conn, &x->out_msg);
+    enum lwm_error_t      err     = lwm_conn_send(&vehicle->conn, &x->out_msg);
+    if (err != LWM_OK)
+    {
+        WARN("command %d send failed: %d\n", x->cmd._long.command, err);
+    }
+    return err;
 }
 
 static enum lwm_action_continuation_t
@@ -42,11 +49,17 @@ lwm_command_then_ack(
     {
         mavlink_command_ack_t ack;
         mavlink_msg_command_ack_decode(msg, &ack);
-        if (ack.command == x->cmd._int.command
+        if (ack.command == x->cmd._long.command
             && ack.result != MAV_RESULT_ACCEPTED)
         {
             WARN("Command failed: %d\n", ack.result);
-            return LWM_ACTION_STOP;
+//            action->result = NULL;
+            return LWM_ACTION_CONTINUE;
+        }
+        if (ack.command == x->cmd._long.command
+            && ack.result == MAV_RESULT_ACCEPTED)
+        {
+            INFO("Command %d accepted\n", ack.command);
         }
     }
     else
@@ -65,10 +78,12 @@ lwm_command_long(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
     ASSERT(then != NULL);
     ASSERT(argc < 8);
 
-    x->type                       = LWM_COMMAND_TYPE_LONG;
+    x->type = LWM_COMMAND_TYPE_LONG;
+    memset(&x->cmd._long, 0, sizeof(x->cmd._long));
     x->cmd._long.command          = command;
     x->cmd._long.target_system    = vehicle->sysid;
     x->cmd._long.target_component = vehicle->compid;
+    x->cmd._long.confirmation     = 1;
     int     n;
     va_list ap;
     va_start(ap, argc);
@@ -102,10 +117,11 @@ lwm_command_int(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
     ASSERT(then != NULL);
     ASSERT(argc < 8);
 
-    x->type                       = LWM_COMMAND_TYPE_INT;
-    x->cmd._int.command           = command;
-    x->cmd._int.target_system     = vehicle->sysid;
-    x->cmd._int.target_component  = vehicle->compid;
+    x->type                      = LWM_COMMAND_TYPE_INT;
+    memset(&x->cmd._long, 0, sizeof(x->cmd._long));
+    x->cmd._int.command          = command;
+    x->cmd._int.target_system    = vehicle->sysid;
+    x->cmd._int.target_component = vehicle->compid;
     int     n;
     va_list ap;
     va_start(ap, argc);

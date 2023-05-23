@@ -86,7 +86,7 @@ int
 main(int argc, char** argv)
 {
     lwm_vehicle_init(&vehicle);
-    lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_UDP, "127.0.0.1", 14550);
+    lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_UDP, 14550);
 
     struct lwm_action_t get_home_position;
     lwm_action_init(&get_home_position, &vehicle, get_home_position_exec);

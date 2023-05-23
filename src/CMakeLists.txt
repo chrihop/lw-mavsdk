@@ -14,8 +14,8 @@ set (LWMAVSDK_SRC
 if (BUILD_FOR STREQUAL "posix")
     list (APPEND LWMAVSDK_SRC
         posix/serial.c
-        posix/udp.c
         posix/udp_client.c
+        posix/udp.c
         )
 elseif (BUILD_FOR STREQUAL "certikos_user")
     list (APPEND LWMAVSDK_SRC

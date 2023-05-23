@@ -60,21 +60,19 @@ lwm_action_microservice_handler(void* context, mavlink_message_t* msg)
         {
             enum lwm_action_continuation_t continuation
                 = action->then(action, &param);
-            if (continuation == LWM_ACTION_CONTINUE)
+            switch (continuation)
             {
-                return;
-            }
-            else if (continuation == LWM_ACTION_STOP)
-            {
-                action->status = LWM_ACTION_FINISHED;
+            case LWM_ACTION_CONTINUE: break;
+            case LWM_ACTION_STOP:
                 lwm_microservice_destroy(action->vehicle, action->microservice);
-            }
-            else if (continuation == LWM_ACTION_RESTART)
-            {
+                action->status = LWM_ACTION_FINISHED;
+                break;
+            case LWM_ACTION_RESTART:
                 lwm_do_execute(action);
+                action->status = LWM_ACTION_EXECUTING;
+                break;
+            default: break;
             }
-
-            action->status = LWM_ACTION_FINISHED;
             return;
         }
     }

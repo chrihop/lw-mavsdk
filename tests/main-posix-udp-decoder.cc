@@ -36,7 +36,7 @@ int
 main(int argc, char** argv)
 {
     lwm_vehicle_init(&vehicle);
-    lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_UDP, "127.0.0.1", 14550);
+    lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_UDP, 14550);
 
     lwm_microservice_t* log = lwm_microservice_create(&vehicle);
     log->handler            = ms_log;

@@ -11,6 +11,8 @@ void posix_serial_register(struct lwm_conn_context_t *ctx);
 
 void posix_udp_register(struct lwm_conn_context_t *ctx);
 
+void posix_udp_client_register(struct lwm_conn_context_t *ctx);
+
 #if __cplusplus
 };
 #endif

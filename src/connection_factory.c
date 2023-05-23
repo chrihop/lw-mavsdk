@@ -17,6 +17,9 @@ lwm_conn_register(struct lwm_conn_context_t * ctx, enum lwm_conn_type_t type)
     case LWM_CONN_TYPE_UDP:
         posix_udp_register(ctx);
         return LWM_OK;
+    case LWM_CONN_TYPE_UDP_CLIENT:
+        posix_udp_client_register(ctx);
+        return LWM_OK;
     default:
         PANIC("Unsupported connection type: %d\n", type);
         return LWM_ERR_NOT_SUPPORTED;

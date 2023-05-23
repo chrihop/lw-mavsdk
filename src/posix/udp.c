@@ -15,13 +15,14 @@ struct posix_udp_t
 };
 
 static enum lwm_error_t
-posix_udp_open(struct lwm_conn_context_t* ctx, struct lwm_conn_params_t* params)
+posix_udp_open(
+    struct lwm_conn_context_t* ctx, struct lwm_conn_params_t* params)
 {
     ASSERT(ctx != NULL);
     ASSERT(params != NULL);
     ASSERT(params->type == LWM_CONN_TYPE_UDP);
 
-    enum lwm_error_t    err = LWM_OK;
+    enum lwm_error_t           err = LWM_OK;
     struct posix_udp_t* udp
         = (struct posix_udp_t*)malloc(sizeof(struct posix_udp_t));
     if (udp == NULL)
@@ -41,12 +42,13 @@ posix_udp_open(struct lwm_conn_context_t* ctx, struct lwm_conn_params_t* params)
     }
 
     struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
+    memset(&addr, 0, sizeof(struct sockaddr_in));
     addr.sin_family      = AF_INET;
     addr.sin_port        = htons(params->params.udp.port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_addr.s_addr = INADDR_ANY;
 
-    if (bind(udp->fd, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+    int rv = bind(udp->fd, (struct sockaddr*)&addr, sizeof(struct sockaddr_in));
+    if (rv < 0)
     {
         WARN("posix_udp_open: unable to bind udp socket, err %s\n",
             strerror(errno));
@@ -54,9 +56,24 @@ posix_udp_open(struct lwm_conn_context_t* ctx, struct lwm_conn_params_t* params)
         goto cleanup;
     }
 
-    memset(&udp->client, 0, sizeof(udp->client));
-    udp->has_client = false;
-    ctx->opaque     = udp;
+    uint8_t   buf[1];
+    socklen_t caddr_len = sizeof(udp->client);
+    ssize_t   n = recvfrom(udp->fd, buf, sizeof(buf), 0,
+                  (struct sockaddr*)&udp->client, &caddr_len);
+    INFO("Wait for UDP client ...\n");
+    if (n <= 0)
+    {
+        WARN("posix_udp_open: unable to receive udp packet, err %s\n",
+            strerror(errno));
+        err = LWM_ERR_IO;
+        goto cleanup;
+    }
+
+    udp->has_client = true;
+    INFO("UDP connection: %d <--> %s:%d\n", params->params.udp.port,
+        inet_ntoa(udp->client.sin_addr), ntohs(udp->client.sin_port));
+
+    ctx->opaque = udp;
     return LWM_OK;
 
 cleanup:
@@ -80,7 +97,8 @@ posix_udp_close(struct lwm_conn_context_t* ctx)
 }
 
 static enum lwm_error_t
-posix_udp_send(struct lwm_conn_context_t* ctx, const uint8_t * data, size_t len)
+posix_udp_send(
+    struct lwm_conn_context_t* ctx, const uint8_t* data, size_t len)
 {
     ASSERT(ctx != NULL);
     ASSERT(ctx->opaque != NULL);
@@ -90,23 +108,19 @@ posix_udp_send(struct lwm_conn_context_t* ctx, const uint8_t * data, size_t len)
     struct posix_udp_t* udp;
     udp = (struct posix_udp_t*)ctx->opaque;
 
-    if (!udp->has_client)
-    {
-        return LWM_OK;
-    }
-
-    ssize_t rv = sendto(udp->fd, data, len, 0, (struct sockaddr*)&udp->client,
-        sizeof(udp->client));
+    ssize_t rv = sendto(udp->fd, data, len, 0, (struct sockaddr *) &udp->client,
+        sizeof(struct sockaddr_in));
     if (rv < 0)
     {
-        WARN("posix_udp_send: unable to send data, err %s\n", strerror(errno));
+        WARN("posix_udp_send: unable to send data, err %s\n",
+            strerror(errno));
         return LWM_ERR_IO;
     }
     return LWM_OK;
 }
 
 static ssize_t
-posix_udp_recv(struct lwm_conn_context_t* ctx, uint8_t * data, size_t len)
+posix_udp_recv(struct lwm_conn_context_t* ctx, uint8_t* data, size_t len)
 {
     ASSERT(ctx != NULL);
     ASSERT(ctx->opaque != NULL);
@@ -116,15 +130,14 @@ posix_udp_recv(struct lwm_conn_context_t* ctx, uint8_t * data, size_t len)
     struct posix_udp_t* udp;
     udp = (struct posix_udp_t*)ctx->opaque;
 
-    socklen_t addrlen = sizeof(udp->client);
-    ssize_t   n      = recvfrom(
-        udp->fd, data, len, 0, (struct sockaddr*)&udp->client, &addrlen);
+    socklen_t caddr_len = sizeof(udp->client);
+    ssize_t n = recvfrom(udp->fd, data, len, 0, (struct sockaddr *) &udp->client, &caddr_len);
     if (n < 0)
     {
-        WARN("posix_udp_recv: unable to recv data, err %s\n", strerror(errno));
+        WARN("posix_udp_recv: unable to recv data, err %s\n",
+            strerror(errno));
         return -LWM_ERR_IO;
     }
-    udp->has_client = true;
     return n;
 }
 
@@ -133,7 +146,7 @@ posix_udp_register(struct lwm_conn_context_t* ctx)
 {
     ASSERT(ctx != NULL);
 
-    ctx->open = posix_udp_open;
+    ctx->open  = posix_udp_open;
     ctx->close = posix_udp_close;
     ctx->send  = posix_udp_send;
     ctx->recv  = posix_udp_recv;

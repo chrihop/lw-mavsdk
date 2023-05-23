@@ -5,6 +5,9 @@
 #include "target.h"
 #include <v2.0/ardupilotmega/mavlink.h>
 
+#define SYSTEM_ID       127
+#define COMPONENT_ID    1
+
 enum lwm_error_t
 {
     LWM_OK,
@@ -28,6 +31,7 @@ enum lwm_error_t
 enum lwm_conn_type_t
 {
     LWM_CONN_TYPE_UDP,
+    LWM_CONN_TYPE_UDP_CLIENT,
     LWM_CONN_TYPE_TCP,
     LWM_CONN_TYPE_SERIAL,
     LWM_CONN_TYPE_CERTIKOS_SERIAL,

@@ -65,7 +65,9 @@ lwm_command_get_home_position(struct lwm_vehicle_t* vehicle)
     struct lwm_command_t cmd;
     lwm_command_long(vehicle, &cmd, lwm_command_get_home_position_then,
         MAV_CMD_GET_HOME_POSITION, 0);
-    lwm_action_upon_msgid(&cmd.action.then_msgid_list, 1, MAVLINK_MSG_ID_HOME_POSITION);
+    lwm_action_upon_msgid(&cmd.action.then_msgid_list, 2,
+        MAVLINK_MSG_ID_HOME_POSITION,
+        MAVLINK_MSG_ID_COMMAND_ACK);
     lwm_command_execute(&cmd);
     return cmd.action.result;
 }

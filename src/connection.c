@@ -60,6 +60,11 @@ lwm_conn_open(struct lwm_conn_context_t* ctx, enum lwm_conn_type_t type, ...)
     {
     case LWM_CONN_TYPE_UDP:
     {
+        params.params.udp.port = va_arg(args, int);
+        break;
+    }
+    case LWM_CONN_TYPE_UDP_CLIENT:
+    {
         params.params.udp.host = va_arg(args, const char*);
         params.params.udp.port = va_arg(args, int);
         break;
