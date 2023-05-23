@@ -13,12 +13,11 @@ static mavlink_battery_status_t      current_battery_status;
 static int                           started = 0;
 
 double
-get_distance_meters(
-    mavlink_global_position_int_t* pos1, mavlink_global_position_int_t* pos2)
+get_distance_meters(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)    
 {
 
-    double dlat  = pos1->lat - pos2->lat;
-    double dlong = pos1->lon - pos2->lon;
+    double dlat  = lat1 - lat2;
+    double dlong = lon1 - lon2;
 
     double dist = sqrt((dlat * dlat) + (dlong * dlong)) * 1.113195e5;
     return dist / 10000000.0;
@@ -123,9 +122,9 @@ main(int argc, char** argv)
         {
             ts = time_us() + 1000000;
 
-            double delta_distance = get_distance_meters(&current_position, &prev_position);
+            double delta_distance = get_distance_meters(current_position.lat, current_position.lon, prev_position.lat, prev_position.lon);
             distance_traveled = distance_traveled + delta_distance;
-            double distance_to_home = get_distance_meters(&current_position, &home_position);
+            double distance_to_home = get_distance_meters(current_position.lat, current_position.lon, home_position.latitude, home_position.longitude);
 
             INFO("delta_distance = %f, distance_traveled = %f, distance_to_home = %f\n", delta_distance, distance_traveled, distance_to_home);
 
