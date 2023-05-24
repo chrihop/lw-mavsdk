@@ -113,7 +113,7 @@ main(int argc, char** argv)
     memcpy(&prev_position, &current_position, sizeof(mavlink_global_position_int_t));    
 
     uint64_t ts = time_us() + 1000000;
-
+    bool return_started = false;
     err = LWM_OK;
     while (err == LWM_OK)
     {        
@@ -128,39 +128,39 @@ main(int argc, char** argv)
 
             double distance_to_home = get_distance_meters(current_position.lat, current_position.lon, home_position.latitude, home_position.longitude);
 
-            INFO("-------------------------\n");
-            INFO("delta_distance = %f, distance_traveled = %f, distance_to_home = %f\n", delta_distance, distance_traveled, distance_to_home);
+            INFO("--------------------------------------------------\n");
+            INFO("delta_distance = %f m, distance_traveled = %f m, distance_to_home = %f m\n", delta_distance, distance_traveled, distance_to_home);
 
-            INFO("Current Position: (%f, %f) at %f m\n",
-                current_position.lat / 10000000.0,
-                current_position.lon / 10000000.0,
-                current_position.alt / 1000.0);
+            // INFO("Current Position: (%f, %f) at %f m\n",
+            //     current_position.lat / 10000000.0,
+            //     current_position.lon / 10000000.0,
+            //     current_position.alt / 1000.0);
 
             int battery_remaining = current_battery_status.battery_remaining;
-            // battery_remaining -= 5; //give a buffer
-            // if (battery_remaining<0) {
-            //     battery_remaining = 0;
-            // }
+            int battery_remaining_with_buffer = battery_remaining - 7;  //so, underestimate the current battery level
 
-            double battery_consumed = initial_remaining_level - battery_remaining;
+            if (battery_remaining_with_buffer < 0)
+                battery_remaining_with_buffer = 0;
+
+            double battery_consumed = initial_remaining_level - battery_remaining_with_buffer;
 
             if (distance_traveled > 300 && battery_consumed > 0) {
                 avg_battery_consumption = distance_traveled/battery_consumed;
-                INFO("Battery remaining: %d%%, avg_battery_consumption: %f meters/%%\n", battery_remaining, avg_battery_consumption);
+                INFO("Battery remaining: %d%% (- buffer = %d%%), avg_battery_consumption: %f meters/%%\n", battery_remaining, battery_remaining_with_buffer, avg_battery_consumption);
 
-                double remaining_range = battery_remaining * avg_battery_consumption;
+                double remaining_range = battery_remaining_with_buffer * avg_battery_consumption;
                 INFO("Remaining range: %f meters, distance to home: %f meters\n", remaining_range, distance_to_home);
 
-                if (remaining_range < distance_to_home) {
-                    INFO("\t!!! NEED TO RETURN TO HOME!!!\n");
-                    lwm_command_do_set_mode(&vehicle, COPTER_MODE_RTL);
+                if (return_started) {
+                    INFO("\t!!! RETURNING TO HOME!!!\n");
+                } else {
+                    if (remaining_range < distance_to_home) {
+                        INFO("\t!!! NEED TO RETURN TO HOME!!!\n");
+                        lwm_command_do_set_mode(&vehicle, COPTER_MODE_RTL);
+                        return_started = true;
+                    }
                 }
-            }
-
-
-            
-
-            // INFO("Battery Status: %d%%\n", current_battery_status.battery_remaining);
+            }           
 
             memcpy(&prev_position, &current_position, sizeof(mavlink_global_position_int_t));
         }
