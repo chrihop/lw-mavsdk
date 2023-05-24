@@ -330,7 +330,7 @@ void lwm_command_request_message_periodic(struct lwm_vehicle_t* vehicle,
     struct lwm_command_t* cmd, uint32_t msgid, uint32_t period_us,
     lwm_then_t callback);
 mavlink_message_t* lwm_command_get_home_position(struct lwm_vehicle_t* vehicle);
-
+void lwm_command_do_set_mode(struct lwm_vehicle_t* vehicle, uint32_t custom_mode);
 
 #if __cplusplus
 };

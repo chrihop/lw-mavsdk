@@ -161,6 +161,13 @@ enum lwm_error_t
 lwm_action_poll(struct lwm_action_t* action)
 {
     enum lwm_error_t err;
+
+    if (action->then_msgid_list.n == 0)
+    {
+        /* not waiting for any response */
+        return LWM_OK;
+    }
+
     err = LWM_OK;
     while (err == LWM_OK)
     {

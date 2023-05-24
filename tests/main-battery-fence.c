@@ -153,6 +153,7 @@ main(int argc, char** argv)
 
                 if (remaining_range < distance_to_home) {
                     INFO("\t!!! NEED TO RETURN TO HOME!!!\n");
+                    lwm_command_do_set_mode(&vehicle, COPTER_MODE_RTL);
                 }
             }
 
