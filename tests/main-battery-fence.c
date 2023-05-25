@@ -13,7 +13,7 @@ static mavlink_battery_status_t      current_battery_status;
 static int                           started = 0;
 
 double
-get_distance_meters(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)    
+get_distance_meters(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)
 {
 
     double dlat  = lat1 - lat2;
@@ -88,8 +88,7 @@ main(int argc, char** argv)
     mavlink_msg_home_position_decode(msg, &home_position);
     INFO("Home Position: (%f, %f) at %f m\n",
         home_position.latitude / 10000000.0,
-        home_position.longitude / 10000000.0,
-        home_position.altitude / 1000.0);
+        home_position.longitude / 10000000.0, home_position.altitude / 1000.0);
 
     struct lwm_microservice_t* curr_pos = lwm_microservice_create(&vehicle);
     curr_pos->handler                   = callback_on_current_position;
@@ -106,63 +105,85 @@ main(int argc, char** argv)
         err = lwm_vehicle_spin_once(&vehicle);
 
     mavlink_global_position_int_t prev_position;
-    double distance_traveled = 0;
+    double                        distance_traveled = 0;
     double initial_remaining_level = current_battery_status.battery_remaining;
     double avg_battery_consumption = 0;
 
-    memcpy(&prev_position, &current_position, sizeof(mavlink_global_position_int_t));    
+    memcpy(&prev_position, &current_position,
+        sizeof(mavlink_global_position_int_t));
 
-    uint64_t ts = time_us() + 1000000;
-
-    err = LWM_OK;
+    uint64_t ts             = time_us() + 1000000;
+    bool     return_started = false;
+    err                     = LWM_OK;
     while (err == LWM_OK)
-    {        
+    {
         /* message show frequency 1 Hz */
         if (ts < time_us())
         {
             ts = time_us() + 1000000;
 
-            double delta_distance = get_distance_meters(current_position.lat, current_position.lon, prev_position.lat, prev_position.lon);
+            double delta_distance = get_distance_meters(current_position.lat,
+                current_position.lon, prev_position.lat, prev_position.lon);
 
             distance_traveled = distance_traveled + delta_distance;
 
-            double distance_to_home = get_distance_meters(current_position.lat, current_position.lon, home_position.latitude, home_position.longitude);
+            double distance_to_home = get_distance_meters(current_position.lat,
+                current_position.lon, home_position.latitude,
+                home_position.longitude);
 
-            INFO("-------------------------\n");
-            INFO("delta_distance = %f, distance_traveled = %f, distance_to_home = %f\n", delta_distance, distance_traveled, distance_to_home);
+            INFO("--------------------------------------------------\n");
+            INFO("delta_distance = %f m, distance_traveled = %f m, "
+                 "distance_to_home = %f m\n",
+                delta_distance, distance_traveled, distance_to_home);
 
-            INFO("Current Position: (%f, %f) at %f m\n",
-                current_position.lat / 10000000.0,
-                current_position.lon / 10000000.0,
-                current_position.alt / 1000.0);
+            // INFO("Current Position: (%f, %f) at %f m\n",
+            //     current_position.lat / 10000000.0,
+            //     current_position.lon / 10000000.0,
+            //     current_position.alt / 1000.0);
 
             int battery_remaining = current_battery_status.battery_remaining;
-            // battery_remaining -= 5; //give a buffer
-            // if (battery_remaining<0) {
-            //     battery_remaining = 0;
-            // }
+            int battery_remaining_with_buffer = battery_remaining
+                - 7; // so, underestimate the current battery level
 
-            double battery_consumed = initial_remaining_level - battery_remaining;
+            if (battery_remaining_with_buffer < 0)
+                battery_remaining_with_buffer = 0;
 
-            if (distance_traveled > 300 && battery_consumed > 0) {
-                avg_battery_consumption = distance_traveled/battery_consumed;
-                INFO("Battery remaining: %d%%, avg_battery_consumption: %f meters/%%\n", battery_remaining, avg_battery_consumption);
+            double battery_consumed
+                = initial_remaining_level - battery_remaining_with_buffer;
 
-                double remaining_range = battery_remaining * avg_battery_consumption;
-                INFO("Remaining range: %f meters, distance to home: %f meters\n", remaining_range, distance_to_home);
+            if (distance_traveled > 300 && battery_consumed > 0)
+            {
+                avg_battery_consumption = distance_traveled / battery_consumed;
+                INFO("Battery remaining: %d%% (- buffer = %d%%), "
+                     "avg_battery_consumption: %f meters/%%\n",
+                    battery_remaining, battery_remaining_with_buffer,
+                    avg_battery_consumption);
 
-                if (remaining_range < distance_to_home) {
-                    INFO("\t!!! NEED TO RETURN TO HOME!!!\n");
+                double remaining_range
+                    = battery_remaining_with_buffer * avg_battery_consumption;
+                INFO(
+                    "Remaining range: %f meters, distance to home: %f meters\n",
+                    remaining_range, distance_to_home);
+
+                if (return_started)
+                {
+                    INFO("\t!!! RETURNING TO HOME!!!\n");
+                }
+                else
+                {
+                    if (remaining_range < distance_to_home)
+                    {
+                        INFO("\t!!! NEED TO RETURN TO HOME!!!\n");
+                        lwm_command_do_set_mode(&vehicle, COPTER_MODE_RTL);
+                        return_started = true;
+                    }
                 }
             }
 
-            lwm_command_do_set_mode(&vehicle, COPTER_MODE_RTL);
-
-            // INFO("Battery Status: %d%%\n", current_battery_status.battery_remaining);
-
-            memcpy(&prev_position, &current_position, sizeof(mavlink_global_position_int_t));
+            memcpy(&prev_position, &current_position,
+                sizeof(mavlink_global_position_int_t));
         }
-        
+
 #ifdef POSIX_LIBC
         usleep(1000);
 #endif
