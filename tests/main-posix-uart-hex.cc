@@ -8,15 +8,21 @@ int
 main(int argc, char** argv)
 {
     lwm_vehicle_init(&vehicle);
-    lwm_conn_open(
-        &vehicle.conn, LWM_CONN_TYPE_SERIAL, "/dev/ttyUART_IO2", 115200);
+
+    const char * dev = "/dev/ttyAMA2";
+    if (argc == 2)
+    {
+        dev = argv[1];
+    }
+    lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_SERIAL, dev, LWM_SERIAL_BAUDRATE_115200);
 
     ssize_t n;
     while (true)
     {
-        n = vehicle.conn.recv(&vehicle.conn, rx_buf, sizeof(rx_buf));
+        n = vehicle.conn.recv(&vehicle.conn, rx_buf, 1024);
         if (n < 0) {break;}
         lwm_puthex(rx_buf, n);
+        fflush(stdout);
     }
 
     return 0;

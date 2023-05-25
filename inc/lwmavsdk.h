@@ -5,8 +5,8 @@
 #include "target.h"
 #include <v2.0/ardupilotmega/mavlink.h>
 
-#define SYSTEM_ID       127
-#define COMPONENT_ID    1
+#define SYSTEM_ID    127
+#define COMPONENT_ID 1
 
 enum lwm_error_t
 {
@@ -41,6 +41,20 @@ enum lwm_conn_type_t
 
 struct lwm_conn_context_t;
 
+enum lwm_serial_baudrate_t
+{
+    LWM_SERIAL_BAUDRATE_9600,
+    LWM_SERIAL_BAUDRATE_19200,
+    LWM_SERIAL_BAUDRATE_38400,
+    LWM_SERIAL_BAUDRATE_57600,
+    LWM_SERIAL_BAUDRATE_115200,
+    LWM_SERIAL_BAUDRATE_230400,
+    LWM_SERIAL_BAUDRATE_460800,
+    LWM_SERIAL_BAUDRATE_921600,
+
+    MAX_LWM_SERIAL_BAUDRATE
+};
+
 struct lwm_conn_params_t
 {
     enum lwm_conn_type_t type;
@@ -58,8 +72,8 @@ struct lwm_conn_params_t
         } tcp;
         struct
         {
-            const char* device;
-            uint32_t    baudrate;
+            const char*                device;
+            enum lwm_serial_baudrate_t baudrate;
         } serial;
         struct
         {
@@ -277,60 +291,61 @@ extern "C"
 {
 #endif
 
-enum lwm_error_t lwm_conn_open(
-    struct lwm_conn_context_t* ctx, enum lwm_conn_type_t type, ...);
-enum lwm_error_t lwm_conn_send(
-    struct lwm_conn_context_t* ctx, mavlink_message_t* msg);
-enum lwm_error_t lwm_conn_recv(
-    struct lwm_conn_context_t* ctx, mavlink_message_t* msg);
-void             lwm_conn_close(struct lwm_conn_context_t* ctx);
-enum lwm_error_t lwm_conn_register(
-    struct lwm_conn_context_t* ctx, enum lwm_conn_type_t type);
+    enum lwm_error_t lwm_conn_open(
+        struct lwm_conn_context_t* ctx, enum lwm_conn_type_t type, ...);
+    enum lwm_error_t lwm_conn_send(
+        struct lwm_conn_context_t* ctx, mavlink_message_t* msg);
+    enum lwm_error_t lwm_conn_recv(
+        struct lwm_conn_context_t* ctx, mavlink_message_t* msg);
+    void             lwm_conn_close(struct lwm_conn_context_t* ctx);
+    enum lwm_error_t lwm_conn_register(
+        struct lwm_conn_context_t* ctx, enum lwm_conn_type_t type);
 
-void lwm_microservice_init(struct lwm_vehicle_t* vehicle);
-void lwm_microservice_process(
-    struct lwm_vehicle_t* vehicle, mavlink_message_t* msg);
-enum lwm_error_t lwm_microservice_add_to(struct lwm_vehicle_t* vehicle,
-    uint32_t msgid, struct lwm_microservice_t* service);
-enum lwm_error_t lwm_microservice_remove_from(struct lwm_vehicle_t* vehicle,
-    uint32_t msgid, struct lwm_microservice_t* service);
-struct lwm_microservice_t* lwm_microservice_create(
-    struct lwm_vehicle_t* vehicle);
-void lwm_microservice_destroy(
-    struct lwm_vehicle_t* vehicle, struct lwm_microservice_t* service);
+    void lwm_microservice_init(struct lwm_vehicle_t* vehicle);
+    void lwm_microservice_process(
+        struct lwm_vehicle_t* vehicle, mavlink_message_t* msg);
+    enum lwm_error_t lwm_microservice_add_to(struct lwm_vehicle_t* vehicle,
+        uint32_t msgid, struct lwm_microservice_t* service);
+    enum lwm_error_t lwm_microservice_remove_from(struct lwm_vehicle_t* vehicle,
+        uint32_t msgid, struct lwm_microservice_t* service);
+    struct lwm_microservice_t* lwm_microservice_create(
+        struct lwm_vehicle_t* vehicle);
+    void lwm_microservice_destroy(
+        struct lwm_vehicle_t* vehicle, struct lwm_microservice_t* service);
 
-void             lwm_vehicle_init(struct lwm_vehicle_t* vehicle);
-enum lwm_error_t lwm_vehicle_spin_once(struct lwm_vehicle_t* vehicle);
-void             lwm_vehicle_spin(struct lwm_vehicle_t* vehicle);
+    void             lwm_vehicle_init(struct lwm_vehicle_t* vehicle);
+    enum lwm_error_t lwm_vehicle_spin_once(struct lwm_vehicle_t* vehicle);
+    void             lwm_vehicle_spin(struct lwm_vehicle_t* vehicle);
 
-void             lwm_action_init(struct lwm_action_t* action,
-                struct lwm_vehicle_t* vehicle, lwm_run_t run);
-enum lwm_error_t lwm_action_poll_once(struct lwm_action_t* action);
-void lwm_action_submit(struct lwm_action_t* action, uint64_t timeout_us);
-void lwm_action_upon_msgid(struct lwm_msgid_list_t* list, size_t n, ...);
-enum lwm_error_t lwm_action_poll(struct lwm_action_t* action);
+    void             lwm_action_init(struct lwm_action_t* action,
+                    struct lwm_vehicle_t* vehicle, lwm_run_t run);
+    enum lwm_error_t lwm_action_poll_once(struct lwm_action_t* action);
+    void lwm_action_submit(struct lwm_action_t* action, uint64_t timeout_us);
+    void lwm_action_upon_msgid(struct lwm_msgid_list_t* list, size_t n, ...);
+    enum lwm_error_t lwm_action_poll(struct lwm_action_t* action);
 
-void             lwm_command_long(struct lwm_vehicle_t* vehicle,
-                struct lwm_command_t* x, lwm_then_t then, uint16_t command, size_t argc,
-                ...);
-void lwm_command_int(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
-    lwm_then_t then, uint16_t command, size_t argc, ...);
-void lwm_command_execute(struct lwm_command_t* x);
-void lwm_command_execute_timeout(
-    struct lwm_command_t* x, uint64_t timeout_us);
-void               lwm_command_execute_async(struct lwm_command_t* x);
+    void             lwm_command_long(struct lwm_vehicle_t* vehicle,
+                    struct lwm_command_t* x, lwm_then_t then, uint16_t command, size_t argc,
+                    ...);
+    void lwm_command_int(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
+        lwm_then_t then, uint16_t command, size_t argc, ...);
+    void lwm_command_execute(struct lwm_command_t* x);
+    void lwm_command_execute_timeout(
+        struct lwm_command_t* x, uint64_t timeout_us);
+    void               lwm_command_execute_async(struct lwm_command_t* x);
 
-
-mavlink_message_t* lwm_command_request_message(
-    struct lwm_vehicle_t* vehicle, uint32_t msgid);
-/**
- * @warning calling this function may lead Ardupilot to crash
- */
-void lwm_command_request_message_periodic(struct lwm_vehicle_t* vehicle,
-    struct lwm_command_t* cmd, uint32_t msgid, uint32_t period_us,
-    lwm_then_t callback);
-mavlink_message_t* lwm_command_get_home_position(struct lwm_vehicle_t* vehicle);
-void lwm_command_do_set_mode(struct lwm_vehicle_t* vehicle, uint32_t custom_mode);
+    mavlink_message_t* lwm_command_request_message(
+        struct lwm_vehicle_t* vehicle, uint32_t msgid);
+    /**
+     * @warning calling this function may lead Ardupilot to crash
+     */
+    void lwm_command_request_message_periodic(struct lwm_vehicle_t* vehicle,
+        struct lwm_command_t* cmd, uint32_t msgid, uint32_t period_us,
+        lwm_then_t callback);
+    mavlink_message_t* lwm_command_get_home_position(
+        struct lwm_vehicle_t* vehicle);
+    void lwm_command_do_set_mode(
+        struct lwm_vehicle_t* vehicle, uint32_t custom_mode);
 
 #if __cplusplus
 };

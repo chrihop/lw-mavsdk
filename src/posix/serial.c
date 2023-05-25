@@ -4,13 +4,32 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/epoll.h>
 #include <termios.h>
 #include <unistd.h>
 
 struct posix_serial_t
 {
-    int                fd;
+    int                fd, epoll;
+    struct epoll_event event[1];
 };
+
+static speed_t
+posix_serial_baudrate(enum lwm_serial_baudrate_t baudrate)
+{
+    switch (baudrate)
+    {
+    case LWM_SERIAL_BAUDRATE_9600: return B9600;
+    case LWM_SERIAL_BAUDRATE_19200: return B19200;
+    case LWM_SERIAL_BAUDRATE_38400: return B38400;
+    case LWM_SERIAL_BAUDRATE_57600: return B57600;
+    case LWM_SERIAL_BAUDRATE_115200: return B115200;
+    case LWM_SERIAL_BAUDRATE_230400: return B230400;
+    case LWM_SERIAL_BAUDRATE_460800: return B460800;
+    case LWM_SERIAL_BAUDRATE_921600: return B921600;
+    default: return B115200;
+    }
+}
 
 static enum lwm_error_t
 posix_serial_open(
@@ -19,6 +38,7 @@ posix_serial_open(
     ASSERT(ctx != NULL);
     ASSERT(params != NULL);
     ASSERT(params->type == LWM_CONN_TYPE_SERIAL);
+    ASSERT(params->params.serial.baudrate < MAX_LWM_SERIAL_BAUDRATE);
 
     enum lwm_error_t       err = LWM_OK;
     struct posix_serial_t* serial
@@ -30,17 +50,14 @@ posix_serial_open(
         return LWM_ERR_NO_MEM;
     }
 
-    serial->fd = open(params->params.serial.device, O_RDWR | O_NOCTTY | O_NDELAY);
+    serial->fd
+        = open(params->params.serial.device, O_RDWR | O_NOCTTY | O_NDELAY);
     if (serial->fd < 0)
     {
         WARN("posix_serial_open: unable to open serial device %s, err %s\n",
             params->params.serial.device, strerror(errno));
         err = LWM_ERR_IO;
         goto cleanup;
-    }
-    else
-    {
-        fcntl(serial->fd, F_SETFL, 0);
     }
 
     struct termios tty;
@@ -55,10 +72,11 @@ posix_serial_open(
     }
 
     cfmakeraw(&tty);
-    tty.c_cflag += CS8 | CLOCAL | CREAD;
+    tty.c_cflag |= CS8 | CLOCAL | CREAD;
     tty.c_cflag &= ~(PARENB | CSTOPB | CRTSCTS);
-    cfsetispeed(&tty, params->params.serial.baudrate);
-    cfsetospeed(&tty, params->params.serial.baudrate);
+    speed_t bd = posix_serial_baudrate(params->params.serial.baudrate);
+    cfsetispeed(&tty, bd);
+    cfsetospeed(&tty, bd);
 
     if (tcsetattr(serial->fd, TCSANOW, &tty) != 0)
     {
@@ -69,10 +87,28 @@ posix_serial_open(
         goto cleanup;
     }
 
-    INFO("serial device %s:%d opened (fd = %d)\n",
-        params->params.serial.device,
-        params->params.serial.baudrate,
-        serial->fd);
+    serial->epoll = epoll_create1(0);
+    if (serial->epoll < 0)
+    {
+        WARN("posix_serial_open: unable to create epoll, err %s\n",
+            strerror(errno));
+        err = LWM_ERR_IO;
+        goto cleanup;
+    }
+
+    struct epoll_event event;
+    event.events  = EPOLLIN;
+    event.data.fd = serial->fd;
+    if (epoll_ctl(serial->epoll, EPOLL_CTL_ADD, serial->fd, &event) < 0)
+    {
+        WARN("posix_serial_open: unable to add serial fd to epoll, err %s\n",
+            strerror(errno));
+        err = LWM_ERR_IO;
+        goto cleanup;
+    }
+
+    INFO("serial device %s:%d opened (fd = %d)\n", params->params.serial.device,
+        params->params.serial.baudrate, serial->fd);
     ctx->opaque = serial;
     return LWM_OK;
 
@@ -125,14 +161,28 @@ posix_serial_recv(struct lwm_conn_context_t* ctx, uint8_t* data, size_t len)
     ASSERT(len > 0);
 
     struct posix_serial_t* serial = (struct posix_serial_t*)ctx->opaque;
-    ssize_t                ret    = read(serial->fd, data, len);
-    if (ret < 0)
+
+    /* wait for event */
+    int n_events = epoll_wait(serial->epoll, serial->event, 1, -1);
+    if (n_events < 0)
+    {
+        WARN("posix_serial_recv: epoll_wait failed, err %s\n", strerror(errno));
+        return -1;
+    }
+
+    if (n_events == 0 || serial->event[0].data.fd != serial->fd)
+    {
+        return 0;
+    }
+
+    ssize_t n = read(serial->fd, data, len);
+    if (n < 0)
     {
         WARN("posix_serial_recv: unable to read from serial device, err %s\n",
             strerror(errno));
         return -1;
     }
-    return ret;
+    return n;
 }
 
 void
