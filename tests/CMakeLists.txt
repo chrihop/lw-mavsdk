@@ -45,6 +45,11 @@ add_executable(
 )
 
 add_executable(
+    main-posix-udpclient-decoder
+    main-posix-udpclient-decoder.cc
+)
+
+add_executable(
     main-get-home-position
     main-get-home-position.c
 )
