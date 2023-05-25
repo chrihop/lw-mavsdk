@@ -26,6 +26,8 @@ callback_on_current_position(
     ASSERT(param != NULL);
 
     mavlink_message_t* msg = param->detail.msg.msg;
+    INFO("callback on current position: %d\n", msg->msgid);
+
     if (msg->msgid != MAVLINK_MSG_ID_GLOBAL_POSITION_INT)
     {
         return LWM_ACTION_CONTINUE;
@@ -49,6 +51,7 @@ callback_on_battery_status(
     ASSERT(param != NULL);
 
     mavlink_message_t* msg = param->detail.msg.msg;
+    INFO("callback on battery status: %d\n", msg->msgid);
 
     if (msg->msgid != MAVLINK_MSG_ID_BATTERY_STATUS)
     {
