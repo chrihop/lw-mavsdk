@@ -13,7 +13,7 @@ static void ms_log(void * context, mavlink_message_t * msg)
 int main(int argc, char ** argv)
 {
     lwm_vehicle_init(&vehicle);
-    lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_SERIAL, "../uart-sitl-tunnel", 115200);
+    lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_SERIAL, "/dev/ttyUART_IO2", 115200);
 
     lwm_microservice_t * log = lwm_microservice_create(&vehicle);
     log->handler = ms_log;

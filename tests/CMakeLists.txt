@@ -35,6 +35,11 @@ add_executable(
 )
 
 add_executable(
+    main-posix-uart-hex
+    main-posix-uart-hex.cc
+)
+
+add_executable(
     main-posix-udp-decoder
     main-posix-udp-decoder.cc
 )

@@ -30,13 +30,17 @@ posix_serial_open(
         return LWM_ERR_NO_MEM;
     }
 
-    serial->fd = open(params->params.serial.device, O_RDWR | O_NOCTTY);
+    serial->fd = open(params->params.serial.device, O_RDWR | O_NOCTTY | O_NDELAY);
     if (serial->fd < 0)
     {
         WARN("posix_serial_open: unable to open serial device %s, err %s\n",
             params->params.serial.device, strerror(errno));
         err = LWM_ERR_IO;
         goto cleanup;
+    }
+    else
+    {
+        fcntl(serial->fd, F_SETFL, 0);
     }
 
     struct termios tty;
@@ -65,6 +69,10 @@ posix_serial_open(
         goto cleanup;
     }
 
+    INFO("serial device %s:%d opened (fd = %d)\n",
+        params->params.serial.device,
+        params->params.serial.baudrate,
+        serial->fd);
     ctx->opaque = serial;
     return LWM_OK;
 
