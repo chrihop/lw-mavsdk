@@ -108,6 +108,9 @@ static inline void lwm_puthex(const void * bytes, size_t len)
     {
         printf("%02x", p[i]);
     }
+#if defined(POSIX_LIBC)
+    fflush(stdout);
+#endif
 }
 
 static inline void lwm_putchars(const void * bytes, size_t len)
@@ -117,6 +120,9 @@ static inline void lwm_putchars(const void * bytes, size_t len)
     {
         printf("%c", p[i]);
     }
+#if defined(POSIX_LIBC)
+    fflush(stdout);
+#endif
 }
 
 
