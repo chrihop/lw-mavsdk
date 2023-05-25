@@ -83,6 +83,18 @@ target_link_libraries(
     m
 )
 
+add_executable(
+    main-battery-fence-udpclient
+    main-battery-fence-udpclient.c
+    battery-fence-common.c
+)
+
+target_link_libraries(
+    main-battery-fence-udpclient
+    PRIVATE
+    m
+)
+
 #
 # - GTests
 #
