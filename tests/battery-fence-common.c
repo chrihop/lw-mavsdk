@@ -116,21 +116,21 @@ battery_fence(struct lwm_vehicle_t* vehicle)
 
     while (err == LWM_OK)
     {
-        /* message show frequency 1 Hz */
-        if (ts < time_us())
-        {
-            ts           = time_us() + 1000000;
-            show_message = true;
-        }
-        else
-        {
-            show_message = false;
-        }
-
         /* update the safety monitor if any status changed */
         if (update_required)
         {
             update_required = false;
+
+            /* message show frequency 1 Hz */
+            if (ts < time_us())
+            {
+                ts           = time_us() + 1000000;
+                show_message = true;
+            }
+            else
+            {
+                show_message = false;
+            }
 
             delta_distance = get_distance_meters(current_position.lat,
                 current_position.lon, prev_position.lat, prev_position.lon);
