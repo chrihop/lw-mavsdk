@@ -1,13 +1,7 @@
 #include "lwmavsdk.h"
+#include "battery_fence.h"
 
 static struct lwm_vehicle_t vehicle;
-
-/**
- * @brief Battery fence
- * @details see battery-fence-common.c
- * @param vehicle
- */
-extern void battery_fence(struct lwm_vehicle_t* vehicle);
 
 int
 main(int argc, char** argv)

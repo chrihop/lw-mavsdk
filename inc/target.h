@@ -95,6 +95,23 @@ time_us(void)
 #endif
 
 #elif defined(CERTIKOS_USER)
+#include <types.h>
+#include <stdio.h>
+#include <time.h>
+
+static inline unsigned long long time_us(void)
+{
+    uint64_t tsc = tsc();
+    return tsc / tsc_khz() * 1000;
+}
+
+#ifndef INFO
+#define INFO(fmt, ...)                                                         \
+    do                                                                         \
+    {                                                                          \
+        printf("[I] " fmt, ##__VA_ARGS__);                                     \
+    } while (0)
+#endif
 
 #else
 #error "Unsupported target"

@@ -84,7 +84,6 @@ lwm_conn_open(struct lwm_conn_context_t* ctx, enum lwm_conn_type_t type, ...)
     case LWM_CONN_TYPE_CERTIKOS_SERIAL:
     {
         params.params.certikos_serial.device   = va_arg(args, uint32_t);
-        params.params.certikos_serial.baudrate = va_arg(args, uint32_t);
         break;
     }
     default:

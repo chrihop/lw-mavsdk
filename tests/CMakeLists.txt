@@ -64,10 +64,18 @@ add_executable(
     main-get-home-position-command.c
 )
 
+#
+# - Battery Fence
+#
+
+include_directories(
+    ${LWMAVSDK_FLIGHT_CONTROL_INC}
+)
+
 add_executable(
     main-battery-fence
     main-battery-fence.c
-    battery-fence-common.c
+    ${LWMAVSDK_FLIGHT_CONTROL_DIR}/battery-fence-common.c
 )
 
 target_link_libraries(
@@ -79,7 +87,7 @@ target_link_libraries(
 add_executable(
     main-battery-fence-udp
     main-battery-fence-udp.c
-    battery-fence-common.c
+    ${LWMAVSDK_FLIGHT_CONTROL_DIR}/battery-fence-common.c
 )
 
 target_link_libraries(
@@ -91,7 +99,7 @@ target_link_libraries(
 add_executable(
     main-battery-fence-udpclient
     main-battery-fence-udpclient.c
-    battery-fence-common.c
+    ${LWMAVSDK_FLIGHT_CONTROL_DIR}/battery-fence-common.c
 )
 
 target_link_libraries(
