@@ -152,9 +152,10 @@ lwm_conn_recv(struct lwm_conn_context_t* ctx, mavlink_message_t* msg)
             if (mavlink_parse_char(
                     MAVLINK_COMM_0, c, &ctx->rx_message, &ctx->rx_status))
             {
-                printf("rx message: id = %d len = %d seq = %d\n",
-                    ctx->rx_message.msgid, ctx->rx_message.len,
-                    ctx->rx_message.seq);
+                printf("rx message: sys %3d, comp %3d, seq %3d, id %3d, len %3d\n",
+                    ctx->rx_message.sysid, ctx->rx_message.compid,
+                    ctx->rx_message.seq, ctx->rx_message.msgid,
+                    ctx->rx_message.len);
 
                 memcpy(msg, &ctx->rx_message, sizeof(mavlink_message_t));
                 input->pos++;
@@ -178,7 +179,7 @@ lwm_conn_recv(struct lwm_conn_context_t* ctx, mavlink_message_t* msg)
         return LWM_ERR_IO;
     }
     lwm_read_buffer_set(input, len);
-    lwm_puthex(input->buffer, len);
+//    lwm_puthex(input->buffer, len);
     return LWM_ERR_NO_DATA;
 }
 
