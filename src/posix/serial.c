@@ -31,6 +31,24 @@ posix_serial_baudrate(enum lwm_serial_baudrate_t baudrate)
     }
 }
 
+static const char *
+posix_serial_baudrate_string(enum lwm_serial_baudrate_t baudrate)
+{
+    switch (baudrate)
+    {
+    case LWM_SERIAL_BAUDRATE_9600:   return "9600";
+    case LWM_SERIAL_BAUDRATE_19200:  return "19200";
+    case LWM_SERIAL_BAUDRATE_38400:  return "38400";
+    case LWM_SERIAL_BAUDRATE_57600:  return "57600";
+    case LWM_SERIAL_BAUDRATE_115200: return "115200";
+    case LWM_SERIAL_BAUDRATE_230400: return "230400";
+    case LWM_SERIAL_BAUDRATE_460800: return "460800";
+    case LWM_SERIAL_BAUDRATE_921600: return "921600";
+    default: return "unknown -> 115200";
+    }
+}
+
+
 static enum lwm_error_t
 posix_serial_open(
     struct lwm_conn_context_t* ctx, struct lwm_conn_params_t* params)
@@ -107,8 +125,9 @@ posix_serial_open(
         goto cleanup;
     }
 
-    INFO("serial device %s:%d opened (fd = %d)\n", params->params.serial.device,
-        params->params.serial.baudrate, serial->fd);
+    INFO("serial device %s:%s opened (fd = %d)\n", params->params.serial.device,
+        posix_serial_baudrate_string(params->params.serial.baudrate),
+        serial->fd);
     ctx->opaque = serial;
     return LWM_OK;
 

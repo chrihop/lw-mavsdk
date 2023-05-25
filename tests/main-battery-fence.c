@@ -19,7 +19,7 @@ main(int argc, char** argv)
     {
         dev = argv[1];
     }
-    lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_SERIAL, dev, LWM_SERIAL_BAUDRATE_115200);
+    err = lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_SERIAL, dev, LWM_SERIAL_BAUDRATE_115200);
 
     if (err != LWM_OK)
     {
