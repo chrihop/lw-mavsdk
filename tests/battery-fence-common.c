@@ -4,7 +4,8 @@
 
 static mavlink_global_position_int_t current_position;
 static mavlink_battery_status_t      current_battery_status;
-static int                           started = 0;
+static int                           started         = 0;
+static bool                          update_required = false;
 
 double
 get_distance_meters(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)
@@ -17,13 +18,17 @@ get_distance_meters(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)
     return dist / 10000000.0;
 }
 
-static void
-callback_on_current_position(void* context, mavlink_message_t* msg)
+static enum lwm_action_continuation_t
+callback_on_current_position(
+    struct lwm_action_t* action, struct lwm_action_param_t* param)
 {
-    ASSERT(msg != NULL);
+    ASSERT(action != NULL);
+    ASSERT(param != NULL);
+
+    mavlink_message_t* msg = param->detail.msg.msg;
     if (msg->msgid != MAVLINK_MSG_ID_GLOBAL_POSITION_INT)
     {
-        return;
+        return LWM_ACTION_CONTINUE;
     }
 
     mavlink_global_position_int_t global_pos;
@@ -31,22 +36,23 @@ callback_on_current_position(void* context, mavlink_message_t* msg)
 
     memcpy(
         &current_position, &global_pos, sizeof(mavlink_global_position_int_t));
-    started = started | 1;
-
-    // INFO("Current Position: (%f, %f) at %f m\n",
-    //     global_pos.lat / 10000000.0,
-    //     global_pos.lon / 10000000.0,
-    //     global_pos.alt / 1000.0);
+    started         = started | 1;
+    update_required = true;
+    return LWM_ACTION_CONTINUE;
 }
 
-static void
-callback_on_battery_status(void* context, mavlink_message_t* msg)
+static enum lwm_action_continuation_t
+callback_on_battery_status(
+    struct lwm_action_t* action, struct lwm_action_param_t* param)
 {
-    ASSERT(msg != NULL);
+    ASSERT(action != NULL);
+    ASSERT(param != NULL);
+
+    mavlink_message_t* msg = param->detail.msg.msg;
 
     if (msg->msgid != MAVLINK_MSG_ID_BATTERY_STATUS)
     {
-        return;
+        return LWM_ACTION_CONTINUE;
     }
 
     mavlink_battery_status_t battery_status;
@@ -55,10 +61,13 @@ callback_on_battery_status(void* context, mavlink_message_t* msg)
     memcpy(&current_battery_status, &battery_status,
         sizeof(mavlink_battery_status_t));
 
-    started = started | 2;
-
-    // INFO("Battery Status: %d%%\n", battery_status.battery_remaining);
+    started         = started | 2;
+    update_required = true;
+    return LWM_ACTION_CONTINUE;
 }
+
+static struct lwm_command_t cmd_get_curr_pos;
+static struct lwm_command_t cmd_get_battery_status;
 
 void
 battery_fence(struct lwm_vehicle_t* vehicle)
@@ -76,16 +85,11 @@ battery_fence(struct lwm_vehicle_t* vehicle)
         home_position.latitude / 10000000.0,
         home_position.longitude / 10000000.0, home_position.altitude / 1000.0);
 
-    struct lwm_microservice_t* curr_pos = lwm_microservice_create(vehicle);
-    curr_pos->handler                   = callback_on_current_position;
-    curr_pos->context                   = NULL;
-    lwm_microservice_add_to(
-        vehicle, MAVLINK_MSG_ID_GLOBAL_POSITION_INT, curr_pos);
-
-    struct lwm_microservice_t* battery = lwm_microservice_create(vehicle);
-    battery->handler                   = callback_on_battery_status;
-    battery->context                   = NULL;
-    lwm_microservice_add_to(vehicle, MAVLINK_MSG_ID_BATTERY_STATUS, battery);
+    lwm_command_request_message_periodic(vehicle, &cmd_get_curr_pos,
+        MAVLINK_MSG_ID_GLOBAL_POSITION_INT, 1000000,
+        callback_on_current_position);
+    lwm_command_request_message_periodic(vehicle, &cmd_get_battery_status,
+        MAVLINK_MSG_ID_BATTERY_STATUS, 1000000, callback_on_battery_status);
 
     while (err == LWM_OK && started != 3)
         err = lwm_vehicle_spin_once(vehicle);
@@ -101,59 +105,79 @@ battery_fence(struct lwm_vehicle_t* vehicle)
     uint64_t ts             = time_us() + 1000000;
     bool     return_started = false;
     err                     = LWM_OK;
+    bool   show_message     = true;
+
+    double delta_distance, distance_to_home;
+    int    battery_remaining, battery_remaining_with_buffer;
+    double battery_consumed, remaining_range;
+
     while (err == LWM_OK)
     {
         /* message show frequency 1 Hz */
         if (ts < time_us())
         {
-            ts = time_us() + 1000000;
+            ts           = time_us() + 1000000;
+            show_message = true;
+        }
+        else
+        {
+            show_message = false;
+        }
 
-            double delta_distance = get_distance_meters(current_position.lat,
+        /* update the safety monitor if any status changed */
+        if (update_required)
+        {
+            update_required = false;
+
+            delta_distance = get_distance_meters(current_position.lat,
                 current_position.lon, prev_position.lat, prev_position.lon);
 
             distance_traveled = distance_traveled + delta_distance;
 
-            double distance_to_home = get_distance_meters(current_position.lat,
+            distance_to_home = get_distance_meters(current_position.lat,
                 current_position.lon, home_position.latitude,
                 home_position.longitude);
 
-            INFO("--------------------------------------------------\n");
-            INFO("delta_distance = %f m, distance_traveled = %f m, "
-                 "distance_to_home = %f m\n",
-                delta_distance, distance_traveled, distance_to_home);
+            if (show_message)
+            {
+                INFO("--------------------------------------------------\n");
+                INFO("delta_distance = %f m, distance_traveled = %f m, "
+                     "distance_to_home = %f m\n",
+                    delta_distance, distance_traveled, distance_to_home);
+            }
 
-            // INFO("Current Position: (%f, %f) at %f m\n",
-            //     current_position.lat / 10000000.0,
-            //     current_position.lon / 10000000.0,
-            //     current_position.alt / 1000.0);
-
-            int battery_remaining = current_battery_status.battery_remaining;
-            int battery_remaining_with_buffer = battery_remaining
+            battery_remaining = current_battery_status.battery_remaining;
+            battery_remaining_with_buffer = battery_remaining
                 - 7; // so, underestimate the current battery level
 
             if (battery_remaining_with_buffer < 0)
                 battery_remaining_with_buffer = 0;
 
-            double battery_consumed
+            battery_consumed
                 = initial_remaining_level - battery_remaining_with_buffer;
 
             if (distance_traveled > 300 && battery_consumed > 0)
             {
                 avg_battery_consumption = distance_traveled / battery_consumed;
-                INFO("Battery remaining: %d%% (- buffer = %d%%), "
-                     "avg_battery_consumption: %f meters/%%\n",
-                    battery_remaining, battery_remaining_with_buffer,
-                    avg_battery_consumption);
-
-                double remaining_range
+                remaining_range
                     = battery_remaining_with_buffer * avg_battery_consumption;
-                INFO(
-                    "Remaining range: %f meters, distance to home: %f meters\n",
-                    remaining_range, distance_to_home);
+
+                if (show_message)
+                {
+                    INFO("Battery remaining: %d%% (- buffer = %d%%), "
+                         "avg_battery_consumption: %f meters/%%\n",
+                        battery_remaining, battery_remaining_with_buffer,
+                        avg_battery_consumption);
+
+                    INFO("Remaining range: %f meters, distance to home: %f "
+                         "meters\n",
+                        remaining_range, distance_to_home);
+                }
 
                 if (return_started)
                 {
-                    INFO("\t!!! RETURNING TO HOME!!!\n");
+                    if (show_message)
+                        INFO("\t!!! RETURNING TO HOME!!!\n");
                 }
                 else
                 {
