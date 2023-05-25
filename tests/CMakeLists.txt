@@ -57,10 +57,23 @@ add_executable(
 add_executable(
     main-battery-fence
     main-battery-fence.c
+    battery-fence-common.c
 )
 
 target_link_libraries(
     main-battery-fence
+    PRIVATE
+    m
+)
+
+add_executable(
+    main-battery-fence-udp
+    main-battery-fence-udp.c
+    battery-fence-common.c
+)
+
+target_link_libraries(
+    main-battery-fence-udp
     PRIVATE
     m
 )
