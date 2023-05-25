@@ -85,10 +85,10 @@ battery_fence(struct lwm_vehicle_t* vehicle)
         home_position.longitude / 10000000.0, home_position.altitude / 1000.0);
 
     lwm_command_request_message_periodic(vehicle, &cmd_get_curr_pos,
-        MAVLINK_MSG_ID_GLOBAL_POSITION_INT, 1000000,
+        MAVLINK_MSG_ID_GLOBAL_POSITION_INT, 250000,
         callback_on_current_position);
     lwm_command_request_message_periodic(vehicle, &cmd_get_battery_status,
-        MAVLINK_MSG_ID_BATTERY_STATUS, 1000000, callback_on_battery_status);
+        MAVLINK_MSG_ID_BATTERY_STATUS, 250000, callback_on_battery_status);
 
     while (err == LWM_OK && started != 3)
         err = lwm_vehicle_spin_once(vehicle);
