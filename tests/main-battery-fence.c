@@ -14,7 +14,7 @@ main(int argc, char** argv)
 {
     enum lwm_error_t err;
     lwm_vehicle_init(&vehicle);
-    err = lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_SERIAL, "/dev/ttyAMA2");
+    err = lwm_conn_open(&vehicle.conn, LWM_CONN_TYPE_SERIAL, "/dev/ttyAMA2", 115200);
     if (err != LWM_OK)
     {
         PANIC("Failed to open connection\n");
