@@ -78,7 +78,6 @@ struct lwm_conn_params_t
         struct
         {
             uint32_t device;
-            uint32_t baudrate;
         } certikos_serial;
     } params;
 };

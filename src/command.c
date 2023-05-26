@@ -84,7 +84,7 @@ lwm_command_long(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
     x->cmd._long.target_system    = vehicle->sysid;
     x->cmd._long.target_component = vehicle->compid;
     x->cmd._long.confirmation     = 1;
-    int     n;
+    size_t     n;
     va_list ap;
     va_start(ap, argc);
     for (n = 0; n < argc; ++n)
@@ -122,7 +122,7 @@ lwm_command_int(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
     x->cmd._int.command          = command;
     x->cmd._int.target_system    = vehicle->sysid;
     x->cmd._int.target_component = vehicle->compid;
-    int     n;
+    size_t     n;
     va_list ap;
     va_start(ap, argc);
     for (n = 0; n < argc; ++n)
