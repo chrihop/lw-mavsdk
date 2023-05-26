@@ -38,6 +38,7 @@ lwm_conn_init(struct lwm_conn_context_t* ctx)
     ctx->send   = NULL;
     ctx->recv   = NULL;
     memset(&ctx->rx_status, 0, sizeof(ctx->rx_status));
+    mavlink_reset_channel_status(MAVLINK_COMM_0);
 }
 
 enum lwm_error_t
