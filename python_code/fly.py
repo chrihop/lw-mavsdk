@@ -6,6 +6,9 @@ import math
 from dronekit import connect, VehicleMode, LocationGlobal, \
     LocationGlobalRelative, Command
 import logging
+import json
+from datetime import datetime
+from argparse import ArgumentParser
 
 connection_string = '127.0.0.1:14551'
 autopilot_logger = logging.getLogger('autopilot')
@@ -13,6 +16,9 @@ autopilot_logger.setLevel(logging.DEBUG)
 
 dronekit_logger = logging.getLogger('dronekit')
 dronekit_logger.setLevel(logging.DEBUG)
+
+fly_logger = logging.getLogger('fly')
+fly_logger.setLevel(logging.DEBUG)
 
 
 def distance(a: LocationGlobalRelative, b: LocationGlobalRelative):
@@ -22,61 +28,62 @@ def distance(a: LocationGlobalRelative, b: LocationGlobalRelative):
 
 
 class Controller:
-    def __init__(self):
+    def __init__(self, conn=connection_string):
         self.batter_level = 100
         self.base_location = None
         self.traveled_distance = 0
-        print(f'Connecting to {connection_string}...')
+        fly_logger.info(f'Connecting to {connection_string}...')
         self.vehicle = connect(connection_string, wait_ready=False)
         self.vehicle.wait_ready(still_waiting_interval=1,
                                 still_waiting_callback=self.still_waiting_callback,
                                 timeout=60)
-        print('connected!')
+        fly_logger.info('connected!')
         self.vehicle.parameters['FENCE_ENABLE'] = 0
 
     def still_waiting_callback(self, atts):
-        print(
-            f'Wait for {atts}: loading vehicle parameters {len(self.vehicle._params_map)}/{self.vehicle._params_count}')
+        fly_logger.debug(
+            f'Wait for {atts}: loading vehicle parameters '
+            f'{len(self.vehicle._params_map)}/{self.vehicle._params_count}')
 
     def disconnect(self):
         self.vehicle.close()
 
     def prepare(self):
-        if not self.vehicle.mode == VehicleMode('STABILIZE'):
-            print(
-                'Vehicle is already in a mission. Please restart the ArduPilot!')
+        if self.vehicle.mode.name != 'STABILIZE':
+            fly_logger.critical(
+                'Copter is in already in a mission. Please restart the ArduPilot!')
             exit(0)
 
     def arm_and_takeoff(self, alt):
-        print('Pre-arm checks')
+        fly_logger.info('Pre-arm checks')
         while not self.vehicle.is_armable:
-            print('Waiting for vehicle to initialise...')
+            fly_logger.info('Waiting for vehicle to initialise...')
             time.sleep(1)
         self.base_location = self.vehicle.location.global_relative_frame
 
-        print('Arming motors')
+        fly_logger.info('Arming motors')
         self.vehicle.mode = VehicleMode('GUIDED')
         self.vehicle.armed = True
 
         while not self.vehicle.armed:
-            print('Waiting for arming...')
+            fly_logger.info('Waiting for arming...')
             time.sleep(1)
 
-        print('Taking off!')
+        fly_logger.info('Taking off!')
         self.vehicle.simple_takeoff(alt)
 
         while True:
-            print(
+            fly_logger.info(
                 f'Altitude: {self.vehicle.location.global_relative_frame.alt}m')
             if self.vehicle.location.global_relative_frame.alt >= alt * 0.95:
-                print('Reached target altitude')
+                fly_logger.info('Reached target altitude')
                 break
             time.sleep(1)
 
     def move_to(self, north, east):
-        print('Find current location...')
+        fly_logger.info('Find current location...')
         pos = self.vehicle.location.global_relative_frame
-        print(f'Current location: {pos.lat:.4f}, {pos.lon:.4f}')
+        fly_logger.info(f'Current location: {pos.lat:.5f}, {pos.lon:.5f}')
 
         r_earth = 6378137.0
         d_lat = north / r_earth
@@ -90,6 +97,20 @@ class Controller:
     def callback_battery_status(self, name, param, msg):
         self.batter_level = msg.battery_remaining
 
+    def crash_check(self) -> bool:
+        dist_base = distance(self.vehicle.location.global_relative_frame,
+                             self.base_location)
+        if self.vehicle.battery.level == 0 and dist_base > 1:
+            return True
+        return False
+
+    def return_to_base_check(self):
+        dist_base = distance(self.vehicle.location.global_relative_frame,
+                             self.base_location)
+        if self.vehicle.mode.name == 'RTL' and dist_base < 1:
+            return True
+        return False
+
     def monitor(self):
         self.vehicle.add_message_listener('BATTERY_STATUS',
                                           self.callback_battery_status)
@@ -100,18 +121,47 @@ class Controller:
             prev_pos = pos
             self.traveled_distance += d_delta
             d_base = distance(pos, self.base_location)
-            print(
-                f'distance base {d_base:.2f}m, traveled {self.traveled_distance:.2f}m, battery {self.batter_level}%')
-
+            fly_logger.info(
+                f'distance to base {d_base:.2f}m, '
+                f'traveled {self.traveled_distance:.2f}m, '
+                f'battery {self.batter_level}%')
+            if self.crash_check():
+                fly_logger.critical(
+                    f'Copter CRASHED due to the battery depletion!')
+                break
+            if self.return_to_base_check():
+                fly_logger.info(f'Copter returned to the base!')
+                break
             time.sleep(1)
+
+    def save(self, case_name):
+        date = datetime.now().strftime('%Y-%m-%d_%H%M%S')
+        with open(f'fly-{case_name}-{date}.json', 'w') as f:
+            json.dump({
+                'Test for': case_name,
+                'Remaining battery': self.batter_level,
+                'Traveled distance': self.traveled_distance,
+                'Crashed': self.crash_check(),
+                'Remaining battery unit': '%',
+                'Traveled distance unit': 'm'
+            }, f)
 
 
 def main():
-    controller = Controller()
+    parser = ArgumentParser()
+    parser.add_argument('--connection', default=connection_string, help='connection string')
+    parser.add_argument('--alt', default=15, help='target altitude')
+    parser.add_argument('--north', default=10000, help='target north distance')
+    parser.add_argument('--east', default=0, help='target east distance')
+    parser.add_argument('--case', default='', help='the current test case name')
+    args = parser.parse_args()
+
+    controller = Controller(args.connection)
     controller.prepare()
-    controller.arm_and_takeoff(15)
-    controller.move_to(10000, 0)
-    # controller.monitor()
+    controller.arm_and_takeoff(args.alt)
+    controller.move_to(args.north, args.east)
+    controller.monitor()
+    controller.save(args.case)
     controller.disconnect()
 
 
