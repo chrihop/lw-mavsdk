@@ -144,7 +144,7 @@ class Controller:
                 'Crashed': self.crash_check(),
                 'Remaining battery unit': '%',
                 'Traveled distance unit': 'm'
-            }, f)
+            }, f, indent=2)
 
 
 def main():
