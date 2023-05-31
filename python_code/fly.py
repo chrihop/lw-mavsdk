@@ -107,7 +107,8 @@ class Controller:
     def return_to_base_check(self):
         dist_base = distance(self.vehicle.location.global_relative_frame,
                              self.base_location)
-        if self.vehicle.mode.name == 'RTL' and dist_base < 1:
+        if self.vehicle.mode.name == 'RTL' and dist_base < 1 and \
+           self.vehicle.location.global_relative_frame.alt < 1:
             return True
         return False
 
