@@ -32,8 +32,8 @@ class Controller:
         self.batter_level = 100
         self.base_location = None
         self.traveled_distance = 0
-        fly_logger.info(f'Connecting to {connection_string}...')
-        self.vehicle = connect(connection_string, wait_ready=False)
+        fly_logger.info(f'Connecting to {conn}...')
+        self.vehicle = connect(conn, wait_ready=False)
         self.vehicle.wait_ready(still_waiting_interval=1,
                                 still_waiting_callback=self.still_waiting_callback,
                                 timeout=60)
