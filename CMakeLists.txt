@@ -30,15 +30,16 @@ set (LWMAVSDK_FLIGHT_CONTROL_DIR ${LWMAVSDK_SOURCE_DIR}/flight_control)
 set (LWMAVSDK_FLIGHT_CONTROL_INC ${LWMAVSDK_SOURCE_DIR}/flight_control)
 set (LWMAVSDK_FLIGHT_CONTROL_BUILD ${LWMAVSDK_BUILD_DIR}/flight_control)
 
+set (LWMAVSDK_C_DEFINITIONS "")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_definitions (DEBUG_BUILD)
+    list(APPEND LWMAVSDK_C_DEFINITIONS "DEBUG_BUILD")
 endif()
 
 if (BUILD_FOR STREQUAL "posix")
     message (STATUS "lw-mavsdk: posix build")
     set (LWMAVSDK_HAS_TEST true)
-    add_compile_definitions(POSIX_LIBC)
+    list(APPEND LWMAVSDK_C_DEFINITIONS "POSIX_LIBC")
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         add_compile_options(-O0 -g -ggdb)
         add_compile_options(-fsanitize=address,undefined -fno-sanitize=alignment)
@@ -47,7 +48,7 @@ if (BUILD_FOR STREQUAL "posix")
     endif()
 elseif (BUILD_FOR STREQUAL "baremetal")
     message (STATUS "lw-mavsdk: baremetal build")
-    add_compile_definitions(BAREMETAL)
+    list(APPEND LWMAVSDK_C_DEFINITIONS "BAREMETAL")
 
     add_compile_options(-nostdlib -nostdinc -ffreestanding -fno-builtin
         -fno-common -fno-exceptions -fno-stack-protector
@@ -81,10 +82,14 @@ elseif (BUILD_FOR STREQUAL "baremetal")
     )
 elseif (BUILD_FOR STREQUAL "certikos_user")
     message(STATUS "lw-mavsdk: certikos user build")
-    add_compile_definitions(CERTIKOS_USER)
+    list(APPEND LWMAVSDK_C_DEFINITIONS "CERTIKOS_USER")
 else()
     message(FATAL_ERROR "lw-mavsdk: unknown target")
 endif()
+
+add_compile_definitions(${LWMAVSDK_C_DEFINITIONS})
+string(REPLACE ";" " " LWMAVSDK_C_DEFINITIONS_STR "${LWMAVSDK_C_DEFINITIONS}")
+message(STATUS "lw-mavsdk: c definitions ${LWMAVSDK_C_DEFINITIONS_STR}")
 
 #
 # MAVLINK
@@ -127,6 +132,10 @@ else()
         ${LWMAVSDK_INCLUDE_DIR}
         ${LWMAVSDK_FLIGHT_CONTROL_INC}
         ${MAVLINK_INCLUDE_DIR}
+        PARENT_SCOPE)
+
+    set (LWMAVSDK_C_DEFINITIONS
+        ${LWMAVSDK_C_DEFINITIONS}
         PARENT_SCOPE)
 endif()
 
