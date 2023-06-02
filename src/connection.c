@@ -146,7 +146,6 @@ lwm_conn_recv(struct lwm_conn_context_t* ctx, mavlink_message_t* msg)
     struct lwm_read_buffer_t* input = &ctx->input;
     if (!lwm_read_buffer_empty(input))
     {
-        size_t drop      = ctx->rx_status.packet_rx_drop_count;
         size_t start_pos = input->pos;
         for (; input->pos < input->len; input->pos++)
         {
@@ -163,12 +162,11 @@ lwm_conn_recv(struct lwm_conn_context_t* ctx, mavlink_message_t* msg)
                 input->pos++;
                 return LWM_OK;
             }
-            if (ctx->rx_status.packet_rx_drop_count > drop)
+            if (ctx->rx_status.packet_rx_drop_count > 0)
             {
                 WARN("%lu packet (%lu bytes) dropped\n",
-                    ctx->rx_status.packet_rx_drop_count - drop,
+                    ctx->rx_status.packet_rx_drop_count,
                     input->pos - start_pos);
-                drop      = ctx->rx_status.packet_rx_drop_count;
                 start_pos = input->pos;
                 continue;
             }
