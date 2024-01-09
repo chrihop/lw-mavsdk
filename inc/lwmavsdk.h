@@ -35,6 +35,7 @@ enum lwm_conn_type_t
     LWM_CONN_TYPE_TCP,
     LWM_CONN_TYPE_SERIAL,
     LWM_CONN_TYPE_CERTIKOS_SERIAL,
+    LWM_CONN_TYPE_CERTIKOS_THINROS,
 
     MAX_LWM_CONN_TYPE
 };
@@ -79,6 +80,11 @@ struct lwm_conn_params_t
         {
             uint32_t device;
         } certikos_serial;
+        struct
+        {
+            const char* publish_topic;
+            const char* subscribe_topic;
+        } thinros;
     } params;
 };
 

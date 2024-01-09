@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 void certikos_user_serial_register(struct lwm_conn_context_t* ctx);
+void certikos_user_thinros_register(struct lwm_conn_context_t* ctx);
 
 #if __cplusplus
 };

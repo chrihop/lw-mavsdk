@@ -20,6 +20,7 @@ if (BUILD_FOR STREQUAL "posix")
 elseif (BUILD_FOR STREQUAL "certikos_user")
     list (APPEND LWMAVSDK_SRC
         certikos_user/serial.c
+        certikos_user/thinros.c
         )
 endif()
 

@@ -87,6 +87,12 @@ lwm_conn_open(struct lwm_conn_context_t* ctx, enum lwm_conn_type_t type, ...)
         params.params.certikos_serial.device   = va_arg(args, uint32_t);
         break;
     }
+    case LWM_CONN_TYPE_CERTIKOS_THINROS:
+    {
+        params.params.thinros.publish_topic   = va_arg(args, const char *);
+        params.params.thinros.subscribe_topic = va_arg(args, const char *);
+        break;
+    }
     default:
     {
         va_end(args);
