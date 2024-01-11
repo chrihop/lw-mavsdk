@@ -20,7 +20,7 @@ certikos_user_serial_open(
     size_t               dev = params->params.certikos_serial.device;
 
     enum syscall_error_t err
-        = sys_device_control(dev, DEV_OPEN_CONSOLE, 0, &serial.fd);
+        = sys_device_control(dev, DEV_CONSOLE_NON_BLOCKING, 0, &serial.fd);
     if (err != 0)
     {
         WARN("Failed to open serial device %d: %s(%d)", dev, syscall_err(err),

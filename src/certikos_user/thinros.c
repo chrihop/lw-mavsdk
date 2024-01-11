@@ -85,7 +85,7 @@ certikos_user_thinros_recv(
     t->recv_dst = data;
     t->recv_len = len;
     t->recv_res = 0;
-    ros_spin_once();
+    ros_spin_one_message();
     return t->recv_res;
 }
 

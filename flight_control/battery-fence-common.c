@@ -72,12 +72,13 @@ void
 battery_fence(struct lwm_vehicle_t* vehicle)
 {
     enum lwm_error_t   err = LWM_OK;
+
     mavlink_message_t* msg;
-    msg = lwm_command_get_home_position(vehicle);
-    if (msg == NULL)
+    while((msg = lwm_command_get_home_position(vehicle)) == NULL)
     {
-        PANIC("Failed to get home position\n");
+        INFO("Retrying to get home position...\n");
     }
+
     mavlink_home_position_t home_position;
     mavlink_msg_home_position_decode(msg, &home_position);
     INFO("Home Position: (%f, %f) at %f m\n",

@@ -180,8 +180,9 @@ lwm_conn_recv(struct lwm_conn_context_t* ctx, mavlink_message_t* msg)
     }
     ASSERT(lwm_read_buffer_empty(input));
     ssize_t len = ctx->recv(ctx, input->buffer, LWM_READ_BUFFER_SIZE - 1);
-    if (len <= 0)
+    if (len < 0)
     {
+        WARN("Connection recv error: %zi\n", len);
         return LWM_ERR_IO;
     }
     lwm_read_buffer_set(input, len);

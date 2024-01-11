@@ -1,4 +1,5 @@
 #include "lwmavsdk.h"
+#include <stdio.h>
 
 void
 lwm_action_init(
@@ -99,7 +100,10 @@ lwm_action_timeout_handler(struct lwm_action_t* action, uint64_t time)
     param.action              = action;
     param.event               = LWM_EVENT_TIMEOUT;
     param.detail.timeout.time = time;
-    action->timeout(action, &param);
+    if(action->timeout)
+    {
+        action->timeout(action, &param);
+    }
     action->status = LWM_ACTION_FAILED;
     lwm_microservice_destroy(action->vehicle, action->microservice);
 }
@@ -127,7 +131,7 @@ lwm_action_submit(struct lwm_action_t* action, uint64_t timeout_us)
             vehicle, action->then_msgid_list.msgid[i], action_service);
     }
 
-    if (timeout_us > 0 && action->timeout != NULL)
+    if (timeout_us > 0)
     {
         action->timeout_time = time_us() + timeout_us;
     }
@@ -146,13 +150,18 @@ lwm_action_poll_once(struct lwm_action_t* action)
         return LWM_ERR_STOPPED;
     }
 
-    if (action->timeout != NULL && time_us() > action->timeout_time)
+    if (time_us() > action->timeout_time)
     {
         lwm_action_timeout_handler(action, action->timeout_time);
         return LWM_ERR_TIMEOUT;
     }
 
     enum lwm_error_t err = lwm_vehicle_spin_once(action->vehicle);
+    if(err == LWM_ERR_IO)
+    {
+        action->status = LWM_ACTION_FAILED;
+        lwm_microservice_destroy(action->vehicle, action->microservice);
+    }
 
     return err;
 }
@@ -165,6 +174,7 @@ lwm_action_poll(struct lwm_action_t* action)
     if (action->then_msgid_list.n == 0)
     {
         /* not waiting for any response */
+        printf("not waiting for any response\n");
         return LWM_OK;
     }
 

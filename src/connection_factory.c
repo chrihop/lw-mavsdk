@@ -31,6 +31,9 @@ lwm_conn_register(struct lwm_conn_context_t * ctx, enum lwm_conn_type_t type)
     case LWM_CONN_TYPE_CERTIKOS_SERIAL:
         certikos_user_serial_register(ctx);
         return LWM_OK;
+    case LWM_CONN_TYPE_CERTIKOS_THINROS:
+        certikos_user_thinros_register(ctx);
+        return LWM_OK;
     default:
         WARN("Unsupported connection type: %d\n", type);
         return LWM_ERR_NOT_SUPPORTED;
