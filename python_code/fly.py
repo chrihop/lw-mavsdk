@@ -3,6 +3,12 @@ from __future__ import print_function
 import getopt, sys
 import time
 import math
+
+if sys.version_info.major == 3 and sys.version_info.minor >= 10:
+    import collections
+    import collections.abc
+    setattr(collections, "MutableMapping", collections.abc.MutableMapping)
+
 from dronekit import connect, VehicleMode, LocationGlobal, \
     LocationGlobalRelative, Command
 import logging

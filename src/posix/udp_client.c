@@ -99,7 +99,9 @@ posix_udp_client_recv(struct lwm_conn_context_t* ctx, uint8_t* data, size_t len)
     struct posix_udp_client_t* udp;
     udp = (struct posix_udp_client_t*)ctx->opaque;
 
-    ssize_t n = recvfrom(udp->fd, data, len, 0, NULL, NULL);
+    socklen_t addr_len = sizeof(struct sockaddr_in);
+    ssize_t n = recvfrom(udp->fd, data, len, 0, (struct sockaddr*)&udp->addr,
+        &addr_len);
     if (n < 0)
     {
         WARN("posix_udp_client_recv: unable to recv data, err %s\n", strerror(errno));

@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.0.0 FATAL_ERROR)
-
 FetchContent_Declare(
     googlebenchmark
     GIT_REPOSITORY https://github.com/google/benchmark.git
