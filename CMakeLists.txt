@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 project(lw-mavsdk)
 
 option (BUILD_FOR "The target system to link with" "posix")
-set_property(CACHE BUILD_FOR PROPERTY STRINGS
-    "posix" "baremetal" "certikos_user" "linux_kernel")
 
 include(CheckCCompilerFlag)
 include(ProcessorCount)
