@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
 project(lw-mavsdk)
 
-set (BUILD_FOR "posix" CACHE STRING "The target system to link with")
+option (BUILD_FOR "The target system to link with" "posix")
 set_property(CACHE BUILD_FOR PROPERTY STRINGS
     "posix" "baremetal" "certikos_user" "linux_kernel")
 
