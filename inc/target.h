@@ -36,8 +36,8 @@ time_us(void)
 
 
 #elif defined(CERTIKOS_USER)
-#include <types.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include <certikos/debug.h>
 
