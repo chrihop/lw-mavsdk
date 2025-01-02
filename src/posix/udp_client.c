@@ -1,4 +1,3 @@
-#include "conn_posix.h"
 #include "lwmavsdk.h"
 #include "target.h"
 

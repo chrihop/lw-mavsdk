@@ -36,6 +36,7 @@ enum lwm_conn_type_t
     LWM_CONN_TYPE_SERIAL,
     LWM_CONN_TYPE_CERTIKOS_SERIAL,
     LWM_CONN_TYPE_CERTIKOS_THINROS,
+    LWM_CONN_TYPE_PARTEE,
 
     MAX_LWM_CONN_TYPE
 };
@@ -85,6 +86,11 @@ struct lwm_conn_params_t
             const char* publish_topic;
             const char* subscribe_topic;
         } thinros;
+        struct
+        {
+            const char* publish_topic;
+            const char* subscribe_topic;
+        } partee;
     } params;
 };
 
@@ -351,6 +357,14 @@ extern "C"
         struct lwm_vehicle_t* vehicle);
     void lwm_command_do_set_mode(
         struct lwm_vehicle_t* vehicle, uint32_t custom_mode);
+
+
+    void certikos_user_partee_register(struct lwm_conn_context_t *ctx);
+    void posix_serial_register(struct lwm_conn_context_t *ctx);
+    void posix_udp_register(struct lwm_conn_context_t *ctx);
+    void posix_udp_client_register(struct lwm_conn_context_t *ctx);
+    void certikos_user_serial_register(struct lwm_conn_context_t* ctx);
+    void certikos_user_thinros_register(struct lwm_conn_context_t* ctx);
 
 #if __cplusplus
 };

@@ -1,7 +1,7 @@
 #ifndef _LWMAVSDK_TARGET_H_
 #define _LWMAVSDK_TARGET_H_
 
-#if defined(POSIX_LIBC)
+#if (defined(POSIX_LIBC) || defined(_MUSL_))
 
 #if __cplusplus
 #include <atomic>
@@ -38,6 +38,7 @@ time_us(void)
 #elif defined(CERTIKOS_USER)
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <time.h>
 #include <certikos/debug.h>
 

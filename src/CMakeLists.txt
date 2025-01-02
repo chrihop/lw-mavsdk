@@ -19,6 +19,14 @@ elseif (BUILD_FOR STREQUAL "certikos_user")
     list (APPEND LWMAVSDK_SRC
         certikos_user/serial.c
         certikos_user/thinros.c
+        certikos_user/partee.c
+        )
+elseif (BUILD_FOR STREQUAL "certikos_user_musl")
+    list (APPEND LWMAVSDK_SRC
+        posix/serial.c
+        posix/udp_client.c
+        posix/udp.c
+        certikos_user/partee.c
         )
 endif()
 
