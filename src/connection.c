@@ -93,6 +93,12 @@ lwm_conn_open(struct lwm_conn_context_t* ctx, enum lwm_conn_type_t type, ...)
         params.params.thinros.subscribe_topic = va_arg(args, const char *);
         break;
     }
+    case LWM_CONN_TYPE_PARTEE:
+    {
+        params.params.partee.publish_topic   = va_arg(args, const char *);
+        params.params.partee.subscribe_topic = va_arg(args, const char *);
+        break;
+    }
     default:
     {
         va_end(args);
