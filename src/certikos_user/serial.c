@@ -1,4 +1,5 @@
 #include <syscall.h>
+#include <certikos/debug.h>
 
 #include "lwmavsdk.h"
 
