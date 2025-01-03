@@ -128,8 +128,6 @@ lwm_conn_send(struct lwm_conn_context_t* ctx, mavlink_message_t* msg)
     mavlink_finalize_message(
         msg, msg->sysid, msg->compid, min_len, msg->len, crc_extra);
     size_t len = mavlink_msg_to_send_buffer(ctx->output, msg);
-//    INFO("send message: sys %3d, comp %3d, seq %3d, id %3d, len %3d\n",
-//        msg->sysid, msg->compid, msg->seq, msg->msgid, msg->len);
     return ctx->send(ctx, ctx->output, len);
 }
 

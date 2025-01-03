@@ -114,21 +114,27 @@ lwm_action_submit(struct lwm_action_t* action, uint64_t timeout_us)
     ASSERT(action != NULL);
     ASSERT(action->vehicle != NULL);
 
-    struct lwm_vehicle_t*      vehicle = action->vehicle;
-    struct lwm_microservice_t* action_service
-        = lwm_microservice_create(vehicle);
-    action_service->context = action;
-    action_service->handler = lwm_action_microservice_handler;
-    action->microservice    = action_service;
-    for (size_t i = 0; i < action->except_msgid_list.n; i++)
+    if(action->except_msgid_list.n > 0 || action->then_msgid_list.n > 0)
     {
-        lwm_microservice_add_to(
-            vehicle, action->except_msgid_list.msgid[i], action_service);
-    }
-    for (size_t i = 0; i < action->then_msgid_list.n; i++)
-    {
-        lwm_microservice_add_to(
-            vehicle, action->then_msgid_list.msgid[i], action_service);
+        struct lwm_vehicle_t*      vehicle = action->vehicle;
+        struct lwm_microservice_t* action_service
+            = lwm_microservice_create(vehicle);
+        // TODO graceful
+        ASSERT(action_service != NULL);
+
+        action_service->context = action;
+        action_service->handler = lwm_action_microservice_handler;
+        action->microservice    = action_service;
+        for (size_t i = 0; i < action->except_msgid_list.n; i++)
+        {
+            lwm_microservice_add_to(
+                vehicle, action->except_msgid_list.msgid[i], action_service);
+        }
+        for (size_t i = 0; i < action->then_msgid_list.n; i++)
+        {
+            lwm_microservice_add_to(
+                vehicle, action->then_msgid_list.msgid[i], action_service);
+        }
     }
 
     if (timeout_us > 0)
@@ -190,13 +196,14 @@ void
 lwm_action_upon_msgid(struct lwm_msgid_list_t* list, size_t n, ...)
 {
     ASSERT(list != NULL);
+    ASSERT(list->n + n <= SIZEOF_ARRAY(list->msgid));
 
     va_list args;
     va_start(args, n);
     for (size_t i = 0; i < n; i++)
     {
-        list->msgid[i] = va_arg(args, uint32_t);
+        list->msgid[list->n + i] = va_arg(args, uint32_t);
     }
     va_end(args);
-    list->n = n;
+    list->n += n;
 }

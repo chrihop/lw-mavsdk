@@ -177,6 +177,7 @@ struct lwm_microservice_registry_t
     uint32_t                                 n;
 };
 
+
 /***
  * Vehicle
  ***/
@@ -294,7 +295,7 @@ struct lwm_command_t
         mavlink_command_long_t _long;
     } cmd;
     mavlink_message_t out_msg;
-    lwm_then_t        do_then;
+    unsigned int      attempts;
 };
 
 #if __cplusplus
@@ -347,6 +348,9 @@ extern "C"
 
     mavlink_message_t* lwm_command_request_message(
         struct lwm_vehicle_t* vehicle, uint32_t msgid);
+
+    enum lwm_action_continuation_t lwm_command_then_nop(
+            struct lwm_action_t* action, struct lwm_action_param_t* param);
     /**
      * @warning calling this function may lead Ardupilot to crash
      */
@@ -355,8 +359,12 @@ extern "C"
         lwm_then_t callback);
     mavlink_message_t* lwm_command_get_home_position(
         struct lwm_vehicle_t* vehicle);
-    void lwm_command_do_set_mode(
-        struct lwm_vehicle_t* vehicle, uint32_t custom_mode);
+    void lwm_command_do_set_mode(struct lwm_vehicle_t* vehicle,
+            uint32_t mode,
+            uint32_t custom_mode,
+            uint32_t custom_sub_mode);
+    void lwm_command_arm_disarm(struct lwm_vehicle_t *vehicle,
+            uint32_t arm, uint32_t force);
 
 
     void certikos_user_partee_register(struct lwm_conn_context_t *ctx);

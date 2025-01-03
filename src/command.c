@@ -9,6 +9,7 @@ lwm_command_exec(struct lwm_action_t* action, void* data)
     ASSERT(data != NULL);
 
     struct lwm_command_t* x = (struct lwm_command_t*)data;
+    struct lwm_vehicle_t* vehicle = x->action.vehicle;
 
     switch (x->type)
     {
@@ -17,6 +18,7 @@ lwm_command_exec(struct lwm_action_t* action, void* data)
             SYSTEM_ID, COMPONENT_ID, &x->out_msg, &x->cmd._int);
         break;
     case LWM_COMMAND_TYPE_LONG:
+        x->cmd._long.confirmation = x->attempts++;
         mavlink_msg_command_long_encode(
             SYSTEM_ID, COMPONENT_ID, &x->out_msg, &x->cmd._long);
         break;
@@ -25,7 +27,6 @@ lwm_command_exec(struct lwm_action_t* action, void* data)
         return LWM_ERR_BAD_PARAM;
     }
 
-    struct lwm_vehicle_t* vehicle = x->action.vehicle;
     enum lwm_error_t      err     = lwm_conn_send(&vehicle->conn, &x->out_msg);
     if (err != LWM_OK)
     {
@@ -34,41 +35,6 @@ lwm_command_exec(struct lwm_action_t* action, void* data)
     return err;
 }
 
-static enum lwm_action_continuation_t
-lwm_command_then_ack(
-    struct lwm_action_t* action, struct lwm_action_param_t* param)
-{
-    ASSERT(action != NULL);
-    ASSERT(action->data != NULL);
-    ASSERT(action->vehicle != NULL);
-    ASSERT(param != NULL);
-
-    struct lwm_command_t* x   = (struct lwm_command_t*)action->data;
-    mavlink_message_t*    msg = param->detail.msg.msg;
-    if (msg->msgid == MAVLINK_MSG_ID_COMMAND_ACK)
-    {
-        mavlink_command_ack_t ack;
-        mavlink_msg_command_ack_decode(msg, &ack);
-        if (ack.command == x->cmd._long.command
-            && ack.result != MAV_RESULT_ACCEPTED)
-        {
-            WARN("Command failed: %d\n", ack.result);
-//            action->result = NULL;
-            return LWM_ACTION_CONTINUE;
-        }
-        if (ack.command == x->cmd._long.command
-            && ack.result == MAV_RESULT_ACCEPTED)
-        {
-            INFO("Command %d accepted\n", ack.command);
-        }
-    }
-    else
-    {
-        return x->do_then(action, param);
-    }
-
-    return LWM_ACTION_CONTINUE;
-}
 
 void
 lwm_command_long(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
@@ -79,11 +45,12 @@ lwm_command_long(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
     ASSERT(argc < 8);
 
     x->type = LWM_COMMAND_TYPE_LONG;
+    x->attempts = 0;
     memset(&x->cmd._long, 0, sizeof(x->cmd._long));
     x->cmd._long.command          = command;
     x->cmd._long.target_system    = vehicle->sysid;
     x->cmd._long.target_component = vehicle->compid;
-    x->cmd._long.confirmation     = 1;
+    x->cmd._long.confirmation     = 0;
     size_t     n;
     va_list ap;
     va_start(ap, argc);
@@ -104,9 +71,8 @@ lwm_command_long(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
     va_end(ap);
 
     lwm_action_init(&x->action, vehicle, lwm_command_exec);
-    x->do_then     = then;
     x->action.data = x;
-    x->action.then = lwm_command_then_ack;
+    x->action.then = then;
 }
 
 void
@@ -142,9 +108,8 @@ lwm_command_int(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
     va_end(ap);
 
     lwm_action_init(&x->action, vehicle, lwm_command_exec);
-    x->do_then     = then;
     x->action.data = x;
-    x->action.then = lwm_command_then_ack;
+    x->action.then = then;
 }
 
 void

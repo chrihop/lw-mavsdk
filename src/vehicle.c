@@ -3,6 +3,8 @@
 void lwm_vehicle_init(struct lwm_vehicle_t* vehicle)
 {
     vehicle->conn.status = LWM_CONN_STATUS_CLOSED;
+    vehicle->sysid = 1;
+    vehicle->compid = MAV_COMP_ID_AUTOPILOT1;
     lwm_microservice_init(vehicle);
 }
 

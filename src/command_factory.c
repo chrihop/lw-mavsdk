@@ -1,6 +1,6 @@
 #include "lwmavsdk.h"
 
-static enum lwm_action_continuation_t
+enum lwm_action_continuation_t
 lwm_command_then_nop(
     struct lwm_action_t* action, struct lwm_action_param_t* param)
 {
@@ -57,18 +57,20 @@ lwm_command_get_home_position_then(
     ASSERT(param != NULL);
 
     mavlink_message_t* msg = param->detail.msg.msg;
-    if (msg->msgid == action->then_msgid_list.msgid[0])
+    if (msg->msgid == MAVLINK_MSG_ID_HOME_POSITION)
     {
         action->result = msg;
         return LWM_ACTION_STOP;
     }
+
+    /* ack */
     return LWM_ACTION_CONTINUE;
 }
 
 mavlink_message_t*
 lwm_command_get_home_position(struct lwm_vehicle_t* vehicle)
 {
-    struct lwm_command_t cmd;
+    struct lwm_command_t cmd = {0};
     lwm_command_long(vehicle, &cmd, lwm_command_get_home_position_then,
         MAV_CMD_GET_HOME_POSITION, 0);
     lwm_action_upon_msgid(&cmd.action.then_msgid_list, 2,
@@ -78,10 +80,22 @@ lwm_command_get_home_position(struct lwm_vehicle_t* vehicle)
 }
 
 void
-lwm_command_do_set_mode(struct lwm_vehicle_t* vehicle, uint32_t custom_mode)
+lwm_command_do_set_mode(struct lwm_vehicle_t* vehicle,
+        uint32_t mode,
+        uint32_t custom_mode,
+        uint32_t custom_sub_mode)
 {
     struct lwm_command_t cmd;
     lwm_command_long(vehicle, &cmd, lwm_command_then_nop, MAV_CMD_DO_SET_MODE,
-        2, MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, custom_mode);
+        3, mode, custom_mode, custom_sub_mode);
+    lwm_command_execute_async(&cmd);
+}
+
+void
+lwm_command_arm_disarm(struct lwm_vehicle_t *vehicle, uint32_t arm, uint32_t force)
+{
+    struct lwm_command_t cmd;
+    lwm_command_long(vehicle, &cmd, lwm_command_then_nop,
+            MAV_CMD_COMPONENT_ARM_DISARM, 2, arm, force);
     lwm_command_execute_async(&cmd);
 }

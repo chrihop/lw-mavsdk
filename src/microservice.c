@@ -213,6 +213,11 @@ void lwm_microservice_process(struct lwm_vehicle_t * vehicle, mavlink_message_t 
     {
         lwm_service_foreach(&entry->list, msg);
     }
+    else
+    {
+        //TODO handle unknown message with service
+        printf("Unknown message id: %d\n", (int)msg->msgid);
+    }
 }
 
 enum lwm_error_t lwm_microservice_add_to(struct lwm_vehicle_t * vehicle, uint32_t msgid, struct lwm_microservice_t * service)
