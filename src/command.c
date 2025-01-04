@@ -36,13 +36,13 @@ lwm_command_exec(struct lwm_action_t* action, void* data)
 }
 
 
+
 void
-lwm_command_long(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
-    lwm_then_t then, uint16_t command, size_t argc, ...)
+_lwm_command_long(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
+    lwm_then_t then, uint16_t command, float params[7])
 {
     ASSERT(x != NULL);
     ASSERT(then != NULL);
-    ASSERT(argc < 8);
 
     x->type = LWM_COMMAND_TYPE_LONG;
     x->attempts = 0;
@@ -51,29 +51,21 @@ lwm_command_long(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
     x->cmd._long.target_system    = vehicle->sysid;
     x->cmd._long.target_component = vehicle->compid;
     x->cmd._long.confirmation     = 0;
-    size_t     n;
-    va_list ap;
-    va_start(ap, argc);
-    for (n = 0; n < argc; ++n)
-    {
-        switch (n)
-        {
-        case 0: x->cmd._long.param1 = va_arg(ap, size_t); break;
-        case 1: x->cmd._long.param2 = va_arg(ap, size_t); break;
-        case 2: x->cmd._long.param3 = va_arg(ap, size_t); break;
-        case 3: x->cmd._long.param4 = va_arg(ap, size_t); break;
-        case 4: x->cmd._long.param5 = va_arg(ap, size_t); break;
-        case 5: x->cmd._long.param6 = va_arg(ap, size_t); break;
-        case 6: x->cmd._long.param7 = va_arg(ap, size_t); break;
-        default: WARN("Too many arguments for command: %lu\n", argc); break;
-        }
-    }
-    va_end(ap);
+    x->cmd._long.param1 = params[0];
+    x->cmd._long.param2 = params[1];
+    x->cmd._long.param3 = params[2];
+    x->cmd._long.param4 = params[3];
+    x->cmd._long.param5 = params[4];
+    x->cmd._long.param6 = params[5];
+    x->cmd._long.param7 = params[6];
+
 
     lwm_action_init(&x->action, vehicle, lwm_command_exec);
     x->action.data = x;
     x->action.then = then;
 }
+
+
 
 void
 lwm_command_int(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,

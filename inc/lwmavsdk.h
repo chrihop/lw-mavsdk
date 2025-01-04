@@ -336,9 +336,18 @@ extern "C"
     void lwm_action_upon_msgid(struct lwm_msgid_list_t* list, size_t n, ...);
     enum lwm_error_t lwm_action_poll(struct lwm_action_t* action);
 
-    void             lwm_command_long(struct lwm_vehicle_t* vehicle,
-                    struct lwm_command_t* x, lwm_then_t then, uint16_t command, size_t argc,
-                    ...);
+
+
+
+#define lwm_command_long(vehicle, x, then, command, ...) \
+  do { \
+    float params[7] = {__VA_ARGS__}; \
+    _lwm_command_long((vehicle), (x), (then), (command), params); \
+  } while(0)
+
+    void _lwm_command_long(struct lwm_vehicle_t* vehicle,
+            struct lwm_command_t* x, lwm_then_t then, uint16_t command,
+            float params[7]);
     void lwm_command_int(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
         lwm_then_t then, uint16_t command, size_t argc, ...);
     void lwm_command_execute(struct lwm_command_t* x);
@@ -359,12 +368,14 @@ extern "C"
         lwm_then_t callback);
     mavlink_message_t* lwm_command_get_home_position(
         struct lwm_vehicle_t* vehicle);
-    void lwm_command_do_set_mode(struct lwm_vehicle_t* vehicle,
-            uint32_t mode,
-            uint32_t custom_mode,
-            uint32_t custom_sub_mode);
+    void lwm_command_do_set_mode_arducopter(struct lwm_vehicle_t* vehicle,
+        enum COPTER_MODE mode);
     void lwm_command_arm_disarm(struct lwm_vehicle_t *vehicle,
-            uint32_t arm, uint32_t force);
+            float arm, float force);
+    void lwm_command_do_set_mode_arducopter_async(struct lwm_vehicle_t* vehicle,
+        enum COPTER_MODE mode);
+    void lwm_command_arm_disarm_async(struct lwm_vehicle_t *vehicle,
+            float arm, float force);
 
 
     void certikos_user_partee_register(struct lwm_conn_context_t *ctx);
