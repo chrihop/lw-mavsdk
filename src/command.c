@@ -4,33 +4,16 @@ static enum lwm_error_t
 lwm_command_exec(struct lwm_action_t* action, void* data)
 {
     ASSERT(action != NULL);
-    ASSERT(action->data != NULL);
     ASSERT(action->vehicle != NULL);
     ASSERT(data != NULL);
 
     struct lwm_command_t* x = (struct lwm_command_t*)data;
     struct lwm_vehicle_t* vehicle = x->action.vehicle;
 
-    switch (x->type)
-    {
-    case LWM_COMMAND_TYPE_INT:
-        mavlink_msg_command_int_encode(
-            SYSTEM_ID, COMPONENT_ID, &x->out_msg, &x->cmd._int);
-        break;
-    case LWM_COMMAND_TYPE_LONG:
-        x->cmd._long.confirmation = x->attempts++;
-        mavlink_msg_command_long_encode(
-            SYSTEM_ID, COMPONENT_ID, &x->out_msg, &x->cmd._long);
-        break;
-    default:
-        WARN("Unknown command type: %d\n", x->type);
-        return LWM_ERR_BAD_PARAM;
-    }
-
-    enum lwm_error_t      err     = lwm_conn_send(&vehicle->conn, &x->out_msg);
+    enum lwm_error_t err = lwm_conn_send(&vehicle->conn, &x->out_msg);
     if (err != LWM_OK)
     {
-        WARN("command %d send failed: %d\n", x->cmd._long.command, err);
+        WARN("command %d send failed: %d\n", x->msg_id, err);
     }
     return err;
 }
@@ -39,26 +22,27 @@ lwm_command_exec(struct lwm_action_t* action, void* data)
 
 void
 _lwm_command_long(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
-    lwm_then_t then, uint16_t command, float params[7])
+    lwm_then_t then, MAV_CMD command, float params[7])
 {
     ASSERT(x != NULL);
     ASSERT(then != NULL);
 
-    x->type = LWM_COMMAND_TYPE_LONG;
-    x->attempts = 0;
-    memset(&x->cmd._long, 0, sizeof(x->cmd._long));
-    x->cmd._long.command          = command;
-    x->cmd._long.target_system    = vehicle->sysid;
-    x->cmd._long.target_component = vehicle->compid;
-    x->cmd._long.confirmation     = 0;
-    x->cmd._long.param1 = params[0];
-    x->cmd._long.param2 = params[1];
-    x->cmd._long.param3 = params[2];
-    x->cmd._long.param4 = params[3];
-    x->cmd._long.param5 = params[4];
-    x->cmd._long.param6 = params[5];
-    x->cmd._long.param7 = params[6];
-
+    x->msg_id = MAVLINK_MSG_ID_COMMAND_LONG;
+    mavlink_msg_command_long_pack(
+        SYSTEM_ID,
+        COMPONENT_ID,
+        &x->out_msg,
+        vehicle->sysid,
+        vehicle->compid,
+        command,
+        0, /* confirmation */
+        params[0],
+        params[1],
+        params[2],
+        params[3],
+        params[4],
+        params[5],
+        params[6]);
 
     lwm_action_init(&x->action, vehicle, lwm_command_exec);
     x->action.data = x;
@@ -68,41 +52,184 @@ _lwm_command_long(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
 
 
 void
-lwm_command_int(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
-    lwm_then_t then, uint16_t command, size_t argc, ...)
+_lwm_command_int(
+        struct lwm_vehicle_t* vehicle,
+        struct lwm_command_t* cmd,
+        lwm_then_t then,
+        MAV_FRAME frame,
+        MAV_CMD command,
+        uint8_t current,
+        uint8_t autocontinue,
+        float param1,
+        float param2,
+        float param3,
+        float param4,
+        int32_t x,
+        int32_t y,
+        float z)
+{
+    ASSERT(cmd != NULL);
+    ASSERT(then != NULL);
+
+    cmd->msg_id = MAVLINK_MSG_ID_COMMAND_INT;
+    mavlink_msg_command_int_pack(
+        SYSTEM_ID,
+        COMPONENT_ID,
+        &cmd->out_msg,
+        vehicle->sysid,
+        vehicle->compid,
+        frame,
+        command,
+        current,
+        autocontinue,
+        param1,
+        param2,
+        param3,
+        param4,
+        x,
+        y,
+        z);
+
+    lwm_action_init(&cmd->action, vehicle, lwm_command_exec);
+    cmd->action.data = cmd;
+    cmd->action.then = then;
+}
+
+
+void
+lwm_command_mission_item_int(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
+    lwm_then_t then, mavlink_mission_item_int_t* item)
 {
     ASSERT(x != NULL);
     ASSERT(then != NULL);
-    ASSERT(argc < 8);
 
-    x->type                      = LWM_COMMAND_TYPE_INT;
-    memset(&x->cmd._long, 0, sizeof(x->cmd._long));
-    x->cmd._int.command          = command;
-    x->cmd._int.target_system    = vehicle->sysid;
-    x->cmd._int.target_component = vehicle->compid;
-    size_t     n;
-    va_list ap;
-    va_start(ap, argc);
-    for (n = 0; n < argc; ++n)
-    {
-        switch (n)
-        {
-        case 0: x->cmd._int.param1 = va_arg(ap, size_t); break;
-        case 1: x->cmd._int.param2 = va_arg(ap, size_t); break;
-        case 2: x->cmd._int.param3 = va_arg(ap, size_t); break;
-        case 3: x->cmd._int.param4 = va_arg(ap, size_t); break;
-        case 4: x->cmd._int.x = va_arg(ap, size_t); break;
-        case 5: x->cmd._int.y = va_arg(ap, size_t); break;
-        case 6: x->cmd._int.z = va_arg(ap, size_t); break;
-        default: WARN("Too many arguments for command: %lu\n", argc); break;
-        }
-    }
-    va_end(ap);
+    x->msg_id = MAVLINK_MSG_ID_MISSION_ITEM_INT;
+    mavlink_msg_mission_item_int_encode(
+        SYSTEM_ID, COMPONENT_ID, &x->out_msg, item);
 
     lwm_action_init(&x->action, vehicle, lwm_command_exec);
     x->action.data = x;
     x->action.then = then;
 }
+
+
+static enum lwm_action_continuation_t
+lwm_command_mission_list_callback(
+        struct lwm_action_t* action, struct lwm_action_param_t* param)
+{
+    struct lwm_command_t* x = (struct lwm_command_t*)action->data;
+    mavlink_message_t* msg = param->detail.msg.msg;
+
+    if (msg->msgid == MAVLINK_MSG_ID_MISSION_REQUEST_INT ||
+        msg->msgid == MAVLINK_MSG_ID_MISSION_REQUEST)
+    {
+        uint32_t seq;
+
+        if(msg->msgid == MAVLINK_MSG_ID_MISSION_REQUEST_INT)
+        {
+            mavlink_mission_request_int_t dec;
+            mavlink_msg_mission_request_int_decode(msg, &dec);
+            seq = dec.seq;
+        }
+        else
+        {
+            mavlink_mission_request_t dec;
+            mavlink_msg_mission_request_decode(msg, &dec);
+            seq = dec.seq;
+        }
+
+        if(seq >= x->mission.items_size)
+        {
+            WARN("Mission request out of range: %d\n", seq);
+            return LWM_ACTION_STOP;
+        }
+
+        printf("[%u %u] reqests item %u\n", msg->sysid, msg->compid, seq);
+        x->mission.items[seq].seq = seq;
+        mavlink_msg_mission_item_int_encode(
+            SYSTEM_ID, COMPONENT_ID, &x->out_msg, &x->mission.items[seq]);
+        lwm_conn_send(&action->vehicle->conn, &x->out_msg);
+    }
+    else if (msg->msgid == MAVLINK_MSG_ID_MISSION_ACK)
+    {
+        printf("[%u %u] mission ack\n", msg->sysid, msg->compid);
+        return x->mission.finally(action, param);
+    }
+    else
+    {
+        printf("[%u %u] unexpected message %u\n", msg->sysid, msg->compid, msg->msgid);
+    }
+
+    return LWM_ACTION_CONTINUE;
+}
+
+
+void
+lwm_command_mission_clear_all(
+        struct lwm_vehicle_t* vehicle,
+        struct lwm_command_t* x,
+        lwm_then_t then,
+        MAV_MISSION_TYPE type)
+{
+    ASSERT(x != NULL);
+    ASSERT(then != NULL);
+
+    x->msg_id = MAVLINK_MSG_ID_MISSION_CLEAR_ALL;
+    mavlink_msg_mission_clear_all_pack(
+        SYSTEM_ID,
+        COMPONENT_ID,
+        &x->out_msg,
+        vehicle->sysid,
+        vehicle->compid,
+        type);
+
+    lwm_action_init(&x->action, vehicle, lwm_command_exec);
+    x->action.data = x;
+    x->action.then = then;
+    lwm_action_upon_msgid(&x->action.then_msgid_list,
+            MAVLINK_MSG_ID_MISSION_ACK);
+}
+
+
+
+
+void
+lwm_command_mission_list(
+        struct lwm_vehicle_t* vehicle,
+        struct lwm_command_t* x,
+        lwm_then_t then,
+        MAV_MISSION_TYPE type,
+        mavlink_mission_item_int_t* items,
+        size_t items_size)
+{
+    ASSERT(x != NULL);
+    ASSERT(then != NULL);
+
+
+    x->msg_id = MAVLINK_MSG_ID_MISSION_COUNT;
+    mavlink_msg_mission_count_pack(
+        SYSTEM_ID,
+        COMPONENT_ID,
+        &x->out_msg,
+        vehicle->sysid,
+        vehicle->compid,
+        items_size,
+        type,
+        0 /* opaque id */);
+
+    x->mission.items = items;
+    x->mission.items_size = items_size;
+    x->mission.finally = then;
+
+    lwm_action_init(&x->action, vehicle, lwm_command_exec);
+    x->action.data = x;
+    x->action.then = lwm_command_mission_list_callback;
+    lwm_action_upon_msgid(&x->action.then_msgid_list,
+            MAVLINK_MSG_ID_MISSION_REQUEST_INT,
+            MAVLINK_MSG_ID_MISSION_REQUEST,
+            MAVLINK_MSG_ID_MISSION_ACK);
+}
+
 
 void
 lwm_command_execute(struct lwm_command_t* x)

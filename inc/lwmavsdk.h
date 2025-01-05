@@ -167,6 +167,7 @@ struct lwm_microservice_registry_entry_t
     bool                      is_active;
     uint32_t                  msgid;
     struct lwm_service_list_t list;
+    struct lwm_service_list_t pending;
 };
 
 #define MAX_LWM_SERVICE_REGISTRY 128
@@ -248,6 +249,7 @@ struct lwm_msgid_list_t
 {
     uint32_t n;
     uint32_t msgid[LWM_MSGID_LIST_SIZE];
+    struct lwm_microservice_t * microservice[LWM_MSGID_LIST_SIZE];
 };
 
 enum lwm_action_status_t
@@ -266,7 +268,6 @@ struct lwm_action_t
     void*                      data;
     void*                      result;
     struct lwm_vehicle_t*      vehicle;
-    struct lwm_microservice_t* microservice;
     lwm_run_t                  run;
     struct lwm_msgid_list_t    except_msgid_list;
     lwm_except_t               except;
@@ -276,26 +277,18 @@ struct lwm_action_t
     lwm_timeout_t              timeout;
 };
 
-/***
- * Command
- ***/
-enum lwm_command_type_t
-{
-    LWM_COMMAND_TYPE_INT,
-    LWM_COMMAND_TYPE_LONG,
-};
-
 struct lwm_command_t
 {
     struct lwm_action_t     action;
-    enum lwm_command_type_t type;
-    union
+    uint32_t                msg_id;
+    mavlink_message_t       out_msg;
+
+    struct
     {
-        mavlink_command_int_t  _int;
-        mavlink_command_long_t _long;
-    } cmd;
-    mavlink_message_t out_msg;
-    unsigned int      attempts;
+        mavlink_mission_item_int_t *    items;
+        size_t                          items_size;
+        lwm_then_t                      finally;
+    } mission;
 };
 
 #if __cplusplus
@@ -333,23 +326,71 @@ extern "C"
                     struct lwm_vehicle_t* vehicle, lwm_run_t run);
     enum lwm_error_t lwm_action_poll_once(struct lwm_action_t* action);
     void lwm_action_submit(struct lwm_action_t* action, uint64_t timeout_us);
-    void lwm_action_upon_msgid(struct lwm_msgid_list_t* list, size_t n, ...);
     enum lwm_error_t lwm_action_poll(struct lwm_action_t* action);
 
 
 
+#define lwm_action_upon_msgid(list, ...) \
+    do { \
+        uint32_t args[] = {__VA_ARGS__}; \
+        _lwm_action_upon_msgid((list), args, SIZEOF_ARRAY(args)); \
+    } while(0)
+    void _lwm_action_upon_msgid(struct lwm_msgid_list_t* list, uint32_t* msgid,
+            size_t n);
 
-#define lwm_command_long(vehicle, x, then, command, ...) \
+#define lwm_command_int(vehicle, _x, then, \
+                        frame, command, current, autocontinue, ...) \
   do { \
-    float params[7] = {__VA_ARGS__}; \
-    _lwm_command_long((vehicle), (x), (then), (command), params); \
+    struct { \
+        float param[4]; \
+        int32_t x; \
+        int32_t y; \
+        float z; \
+    } args = {__VA_ARGS__}; \
+    _lwm_command_int((vehicle), (_x), (then), frame, command, current, \
+                     autocontinue, args.param[0], args.param[1], \
+                     args.param[2], args.param[3], args.x, args.y, args.z); \
   } while(0)
+    void _lwm_command_int(
+            struct lwm_vehicle_t* vehicle,
+            struct lwm_command_t* cmd,
+            lwm_then_t then,
+            MAV_FRAME frame,
+            MAV_CMD command,
+            uint8_t current,
+            uint8_t autocontinue,
+            float param1,
+            float param2,
+            float param3,
+            float param4,
+            int32_t x,
+            int32_t y,
+            float z);
 
-    void _lwm_command_long(struct lwm_vehicle_t* vehicle,
-            struct lwm_command_t* x, lwm_then_t then, uint16_t command,
+#define lwm_command_long(vehicle, _x, then, command, ...) \
+  do { \
+    float args[7] = {__VA_ARGS__}; \
+    _lwm_command_long((vehicle), (_x), (then), (command), args); \
+  } while(0)
+    void _lwm_command_long(
+            struct lwm_vehicle_t* vehicle,
+            struct lwm_command_t* x,
+            lwm_then_t then,
+            MAV_CMD command,
             float params[7]);
-    void lwm_command_int(struct lwm_vehicle_t* vehicle, struct lwm_command_t* x,
-        lwm_then_t then, uint16_t command, size_t argc, ...);
+
+    void lwm_command_mission_item_int(struct lwm_vehicle_t* vehicle,
+            struct lwm_command_t* x, lwm_then_t then,
+            mavlink_mission_item_int_t* item);
+    void lwm_command_mission_list(struct lwm_vehicle_t* vehicle,
+            struct lwm_command_t* x, lwm_then_t then, MAV_MISSION_TYPE type,
+            mavlink_mission_item_int_t* items, size_t items_size);
+void
+lwm_command_mission_clear_all(
+        struct lwm_vehicle_t* vehicle,
+        struct lwm_command_t* x,
+        lwm_then_t then,
+        MAV_MISSION_TYPE type);
     void lwm_command_execute(struct lwm_command_t* x);
     void lwm_command_execute_timeout(
         struct lwm_command_t* x, uint64_t timeout_us);

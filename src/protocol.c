@@ -7,6 +7,7 @@ lwm_action_init(
 {
     ASSERT(action != NULL);
     ASSERT(vehicle != NULL);
+    ASSERT(run != NULL);
 
     action->vehicle             = vehicle;
     action->run                 = run;
@@ -18,6 +19,26 @@ lwm_action_init(
     action->except              = NULL;
     action->timeout             = NULL;
     action->result              = NULL;
+}
+
+static void
+lwm_action_destroy_microservices(struct lwm_action_t* action)
+{
+    ASSERT(action != NULL);
+
+    struct lwm_vehicle_t *vehicle = action->vehicle;
+    for (size_t i = 0; i < action->except_msgid_list.n; i++)
+    {
+        lwm_microservice_destroy(vehicle,
+                action->except_msgid_list.microservice[i]);
+        action->except_msgid_list.microservice[i] = NULL;
+    }
+    for (size_t i = 0; i < action->then_msgid_list.n; i++)
+    {
+        lwm_microservice_destroy(vehicle,
+                action->then_msgid_list.microservice[i]);
+        action->then_msgid_list.microservice[i] = NULL;
+    }
 }
 
 static void
@@ -36,10 +57,13 @@ lwm_do_execute(struct lwm_action_t* action)
             param.detail.fail.err = err;
             action->except(action, &param);
         }
-        lwm_microservice_destroy(action->vehicle, action->microservice);
+        lwm_action_destroy_microservices(action);
         action->status = LWM_ACTION_FAILED;
     }
 }
+
+
+
 
 static void
 lwm_action_microservice_handler(void* context, mavlink_message_t* msg)
@@ -55,6 +79,8 @@ lwm_action_microservice_handler(void* context, mavlink_message_t* msg)
 
     /* if the message in the `then` list */
     struct lwm_msgid_list_t* msgid_list = &action->then_msgid_list;
+    ASSERT(msgid_list->n <= SIZEOF_ARRAY(msgid_list->msgid));
+
     for (size_t i = 0; i < msgid_list->n; i++)
     {
         if (msg->msgid == msgid_list->msgid[i])
@@ -65,7 +91,7 @@ lwm_action_microservice_handler(void* context, mavlink_message_t* msg)
             {
             case LWM_ACTION_CONTINUE: break;
             case LWM_ACTION_STOP:
-                lwm_microservice_destroy(action->vehicle, action->microservice);
+                lwm_action_destroy_microservices(action);
                 action->status = LWM_ACTION_FINISHED;
                 break;
             case LWM_ACTION_RESTART:
@@ -85,7 +111,7 @@ lwm_action_microservice_handler(void* context, mavlink_message_t* msg)
         {
             action->except(action, &param);
             action->status = LWM_ACTION_FAILED;
-            lwm_microservice_destroy(action->vehicle, action->microservice);
+            lwm_action_destroy_microservices(action);
             return;
         }
     }
@@ -105,7 +131,7 @@ lwm_action_timeout_handler(struct lwm_action_t* action, uint64_t time)
         action->timeout(action, &param);
     }
     action->status = LWM_ACTION_FAILED;
-    lwm_microservice_destroy(action->vehicle, action->microservice);
+    lwm_action_destroy_microservices(action);
 }
 
 void
@@ -114,26 +140,37 @@ lwm_action_submit(struct lwm_action_t* action, uint64_t timeout_us)
     ASSERT(action != NULL);
     ASSERT(action->vehicle != NULL);
 
+
     if(action->except_msgid_list.n > 0 || action->then_msgid_list.n > 0)
     {
         struct lwm_vehicle_t*      vehicle = action->vehicle;
-        struct lwm_microservice_t* action_service
-            = lwm_microservice_create(vehicle);
-        // TODO graceful
-        ASSERT(action_service != NULL);
-
-        action_service->context = action;
-        action_service->handler = lwm_action_microservice_handler;
-        action->microservice    = action_service;
         for (size_t i = 0; i < action->except_msgid_list.n; i++)
         {
+            struct lwm_microservice_t* action_service
+                = lwm_microservice_create(vehicle);
+            ASSERT(action_service != NULL); /* graceful realloc */
+
+            action_service->context = action;
+            action_service->handler = lwm_action_microservice_handler;
+
             lwm_microservice_add_to(
                 vehicle, action->except_msgid_list.msgid[i], action_service);
+
+            action->except_msgid_list.microservice[i] = action_service;
         }
         for (size_t i = 0; i < action->then_msgid_list.n; i++)
         {
+            struct lwm_microservice_t* action_service
+                = lwm_microservice_create(vehicle);
+            ASSERT(action_service != NULL); /* graceful realloc */
+
+            action_service->context = action;
+            action_service->handler = lwm_action_microservice_handler;
+
             lwm_microservice_add_to(
                 vehicle, action->then_msgid_list.msgid[i], action_service);
+
+            action->then_msgid_list.microservice[i] = action_service;
         }
     }
 
@@ -166,7 +203,7 @@ lwm_action_poll_once(struct lwm_action_t* action)
     if(err == LWM_ERR_IO)
     {
         action->status = LWM_ACTION_FAILED;
-        lwm_microservice_destroy(action->vehicle, action->microservice);
+        lwm_action_destroy_microservices(action);
     }
 
     return err;
@@ -193,17 +230,15 @@ lwm_action_poll(struct lwm_action_t* action)
 }
 
 void
-lwm_action_upon_msgid(struct lwm_msgid_list_t* list, size_t n, ...)
+_lwm_action_upon_msgid(struct lwm_msgid_list_t* list, uint32_t *args, size_t n)
 {
     ASSERT(list != NULL);
     ASSERT(list->n + n <= SIZEOF_ARRAY(list->msgid));
 
-    va_list args;
-    va_start(args, n);
     for (size_t i = 0; i < n; i++)
     {
-        list->msgid[list->n + i] = va_arg(args, uint32_t);
+        list->msgid[list->n + i] = args[i];
     }
-    va_end(args);
     list->n += n;
 }
+

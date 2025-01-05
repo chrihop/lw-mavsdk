@@ -91,7 +91,7 @@ main(int argc, char** argv)
     struct lwm_action_t get_home_position;
     lwm_action_init(&get_home_position, &vehicle, get_home_position_exec);
     get_home_position.then = get_home_position_then;
-    lwm_action_upon_msgid(&get_home_position.then_msgid_list, 2,
+    lwm_action_upon_msgid(&get_home_position.then_msgid_list,
         MAVLINK_MSG_ID_COMMAND_ACK, MAVLINK_MSG_ID_GLOBAL_POSITION_INT);
     lwm_action_submit(&get_home_position, 0);
     lwm_action_poll(&get_home_position);
