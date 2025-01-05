@@ -15,6 +15,7 @@ lwm_service_pool_alloc(struct lwm_service_pool_t * pool)
 {
     if (pool->n >= MAX_LWM_SERVICE)
     {
+        WARN("Service pool is full\n");
         return NULL;
     }
     for (uint32_t i = 0; i < MAX_LWM_SERVICE; i++)
@@ -63,7 +64,8 @@ lwm_service_push_tail(struct lwm_service_list_t * list, struct lwm_microservice_
         service->prev = list->tail;
         list->tail = service;
     }
-    service->next = NULL;
+    /* Not setting null allows to push a list to another list */
+    //service->next = NULL;
 }
 
 static void
@@ -149,6 +151,7 @@ lwm_microservice_registry_alloc(struct lwm_microservice_registry_t * registry)
 {
     if (registry->n >= MAX_LWM_SERVICE_REGISTRY)
     {
+        WARN("Service registry is full\n");
         return NULL;
     }
     for (uint32_t i = 0; i < MAX_LWM_SERVICE_REGISTRY; i++)
@@ -232,7 +235,8 @@ lwm_microservice_registry_remove(
         uint32_t msgid,
         struct lwm_microservice_t * service)
 {
-    struct lwm_microservice_registry_entry_t * entry = lwm_microservice_registry_find(registry, msgid);
+    struct lwm_microservice_registry_entry_t * entry =
+        lwm_microservice_registry_find(registry, msgid);
     if (entry != NULL && lwm_service_on_list(&entry->list, service))
     {
         lwm_service_remove(&entry->list, service);
@@ -281,32 +285,35 @@ lwm_microservice_process(
     {
         /* Using a pending list avoids reading messages that are currently
          * being processed. */
-        while (lwm_service_head(&entry->pending) != NULL)
+        struct lwm_microservice_t * pending_list = lwm_service_head(&entry->pending);
+        if(pending_list != NULL)
         {
-            struct lwm_microservice_t * service = lwm_service_head(&entry->pending);
-            lwm_service_remove(&entry->pending, service);
-            lwm_service_push_tail(&entry->list, service);
+            /* linked list concat */
+            lwm_service_push_tail(&entry->list, pending_list);
+            lwm_service_list_init(&entry->pending);
         }
+
 
         lwm_service_foreach(&entry->list, msg);
     }
     else
     {
         //TODO handle unknown message with service
-        printf("Unknown message id: %d\n", (int)msg->msgid);
+        WARN("Unknown message id: %d\n", (int)msg->msgid);
     }
 }
 
 enum lwm_error_t
 lwm_microservice_add_to(
         struct lwm_vehicle_t * vehicle,
-        uint32_t msgid, struct
-        lwm_microservice_t * service)
+        uint32_t msgid,
+        struct lwm_microservice_t * service)
 {
-    if (service->handler == NULL)
-    {
-        return LWM_ERR_BAD_PARAM;
-    }
+    ASSERT(service != NULL);
+    ASSERT(service->handler != NULL);
+    ASSERT(service->next == NULL); /* cannot be in two lists */
+    ASSERT(service->prev == NULL); /* cannot be in two lists */
+
     lwm_microservice_registry_add(&vehicle->registry, msgid, service);
     return LWM_OK;
 }

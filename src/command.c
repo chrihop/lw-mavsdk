@@ -144,7 +144,6 @@ lwm_command_mission_list_callback(
             return LWM_ACTION_STOP;
         }
 
-        printf("[%u %u] reqests item %u\n", msg->sysid, msg->compid, seq);
         x->mission.items[seq].seq = seq;
         mavlink_msg_mission_item_int_encode(
             SYSTEM_ID, COMPONENT_ID, &x->out_msg, &x->mission.items[seq]);
@@ -152,12 +151,7 @@ lwm_command_mission_list_callback(
     }
     else if (msg->msgid == MAVLINK_MSG_ID_MISSION_ACK)
     {
-        printf("[%u %u] mission ack\n", msg->sysid, msg->compid);
         return x->mission.finally(action, param);
-    }
-    else
-    {
-        printf("[%u %u] unexpected message %u\n", msg->sysid, msg->compid, msg->msgid);
     }
 
     return LWM_ACTION_CONTINUE;
@@ -174,6 +168,7 @@ lwm_command_mission_clear_all(
     ASSERT(x != NULL);
     ASSERT(then != NULL);
 
+    memset(x, 0, sizeof(*x));
     x->msg_id = MAVLINK_MSG_ID_MISSION_CLEAR_ALL;
     mavlink_msg_mission_clear_all_pack(
         SYSTEM_ID,
@@ -205,6 +200,7 @@ lwm_command_mission_list(
     ASSERT(x != NULL);
     ASSERT(then != NULL);
 
+    memset(x, 0, sizeof(*x));
 
     x->msg_id = MAVLINK_MSG_ID_MISSION_COUNT;
     mavlink_msg_mission_count_pack(
