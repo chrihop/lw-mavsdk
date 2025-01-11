@@ -1,5 +1,4 @@
 #include "lwmavsdk.h"
-#include <v2.0/ardupilotmega/mavlink.h>
 
 static void
 lwm_read_buffer_init(struct lwm_read_buffer_t* buf)

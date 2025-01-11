@@ -14,6 +14,7 @@ if (BUILD_FOR STREQUAL "posix")
         posix/serial.c
         posix/udp_client.c
         posix/udp.c
+        certikos_user/partee.c
         )
 elseif (BUILD_FOR STREQUAL "certikos_user")
     list (APPEND LWMAVSDK_SRC
