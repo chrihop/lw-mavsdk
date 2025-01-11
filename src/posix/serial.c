@@ -1,5 +1,4 @@
 #include "lwmavsdk.h"
-#include "target.h"
 
 #include <errno.h>
 #include <fcntl.h>

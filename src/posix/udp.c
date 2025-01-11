@@ -1,5 +1,4 @@
 #include "lwmavsdk.h"
-#include "target.h"
 
 #include <arpa/inet.h>
 #include <errno.h>

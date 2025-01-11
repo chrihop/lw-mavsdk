@@ -2,7 +2,7 @@
 #define _LWMAVSDK_LWMAVSDK_H_
 
 #include "lwmavsdk.h"
-#include "target.h"
+#include "lwmavsdk-target.h"
 #include <v2.0/ardupilotmega/mavlink.h>
 
 #define SYSTEM_ID    127

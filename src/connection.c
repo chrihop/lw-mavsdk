@@ -1,5 +1,4 @@
 #include "lwmavsdk.h"
-#include "target.h"
 #include <v2.0/ardupilotmega/mavlink.h>
 
 static void
