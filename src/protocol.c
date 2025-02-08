@@ -177,6 +177,7 @@ lwm_action_submit(struct lwm_action_t* action, uint64_t timeout_us)
     if (timeout_us > 0)
     {
         action->timeout_time = time_us() + timeout_us;
+        INFO("timeout_us: %llu (%llu)\n", timeout_us, action->timeout_time);
     }
 
     lwm_do_execute(action);

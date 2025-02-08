@@ -299,7 +299,7 @@ lwm_microservice_process(
     else
     {
         //TODO handle unknown message with service
-        WARN("Unknown message id: %d\n", (int)msg->msgid);
+        //WARN("Unknown message id: %d\n", (int)msg->msgid);
     }
 }
 
